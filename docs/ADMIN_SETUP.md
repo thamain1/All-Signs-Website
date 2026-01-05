@@ -45,11 +45,16 @@ ON CONFLICT (user_id) DO UPDATE SET role = 'admin';
 5. You can edit the title, alt text, and tags after upload
 
 ### Storage Bucket
-The first time you upload an image, a storage bucket called `media-library` will be created automatically. If uploads fail:
+The first time you upload an image, a storage bucket called `media-library` will be created automatically. Storage policies have been configured to:
+- Allow admin users to upload, update, and delete files
+- Allow public read access so images display on your site
 
-1. Check that your Supabase project has storage enabled
-2. Verify RLS policies allow admin users to upload
-3. Check browser console for specific error messages
+If uploads fail:
+1. Ensure you're logged in as an admin user (check your profile role in database)
+2. Check that your Supabase project has storage enabled
+3. Verify the storage policies are in place (run the latest migration)
+4. Check browser console for specific error messages
+5. Try logging out and back in to refresh your session
 
 ## Using Content Slots
 
@@ -78,12 +83,40 @@ When editing a slot, you'll see visual previews of all available images. Click o
 
 ## Troubleshooting
 
+### Upload Failed Error
+If you see "Failed to upload image. Please check console for details and ensure you have admin permissions":
+
+1. **Check Admin Status**: Run this query to verify your role:
+   ```sql
+   SELECT u.email, p.role
+   FROM auth.users u
+   LEFT JOIN profiles p ON p.user_id = u.id
+   WHERE u.email = 'your-email@example.com';
+   ```
+   If role is NULL or 'user', promote yourself to admin using the SQL in "Creating Your First Admin User" section.
+
+2. **Create Missing Profile**: If you don't have a profile entry:
+   ```sql
+   INSERT INTO profiles (user_id, role)
+   SELECT id, 'admin'
+   FROM auth.users
+   WHERE email = 'your-email@example.com'
+   ON CONFLICT (user_id) DO UPDATE SET role = 'admin';
+   ```
+
+3. **Log Out and Back In**: After changing roles, you must log out and log back in for the change to take effect.
+
+4. **Check Browser Console**: Look for specific error messages that might indicate the exact issue.
+
 ### Uploads Disappear
 If uploaded images don't appear in the Media Library:
 1. Check browser console for errors
 2. Verify you're logged in as an admin user
-3. Check Supabase Storage permissions
-4. Ensure the `media-library` bucket exists and is public
+3. Refresh the page after upload
+4. Check the database to see if the record was created:
+   ```sql
+   SELECT * FROM media_assets ORDER BY created_at DESC LIMIT 5;
+   ```
 
 ### Can't See Admin Links
 If you don't see admin links in the header:
