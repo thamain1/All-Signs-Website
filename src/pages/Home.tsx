@@ -22,7 +22,8 @@ export function Home() {
       contentResolver.getContentSlot('home.categoryTile.decals'),
       contentResolver.getContentSlot('home.categoryTile.vehicle'),
       contentResolver.getContentSlot('home.categoryTile.flags'),
-      contentResolver.getContentSlot('home.categoryTile.tradeShow')
+      contentResolver.getContentSlot('home.categoryTile.tradeShow'),
+      contentResolver.getContentSlot('home.categoryTile.accessories')
     ]);
 
     setCategoryContent({
@@ -32,7 +33,8 @@ export function Home() {
       decals: categories[3] || { fallbackPath: '/images/stock/category-decals-600.webp', alt: 'Decals and stickers', enabled: true },
       vehicle: categories[4] || { fallbackPath: '/images/stock/category-vehicle-600.webp', alt: 'Vehicle graphics', enabled: true },
       flags: categories[5] || { fallbackPath: '/images/stock/category-flags-600.webp', alt: 'Flags', enabled: true },
-      tradeShow: categories[6] || { fallbackPath: '/images/stock/category-trade-show-600.webp', alt: 'Trade show displays', enabled: true }
+      tradeShow: categories[6] || { fallbackPath: '/images/stock/category-trade-show-600.webp', alt: 'Trade show displays', enabled: true },
+      accessories: categories[7] || { fallbackPath: '/images/stock/category-accessories-600.webp', alt: 'Stakes, stands, frames, and mounting hardware', enabled: true }
     });
   }
 
@@ -307,9 +309,15 @@ export function Home() {
               to="/products/accessories"
               className="group bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition"
             >
-              <div className="relative h-48 overflow-hidden bg-gray-100">
-                <div className="absolute inset-0 bg-gradient-to-br from-gray-500 to-gray-600 flex items-center justify-center">
-                  <span className="text-white text-4xl font-bold">Hardware</span>
+              <div className="relative h-48 overflow-hidden">
+                <img
+                  src={contentResolver.getImageUrl(categoryContent.accessories)}
+                  alt={categoryContent.accessories?.alt || 'Stakes, stands, frames, and mounting hardware'}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  loading="lazy"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-gray-900/80 via-gray-900/40 to-transparent flex items-end justify-center pb-4">
+                  <span className="text-white text-3xl font-bold">Hardware</span>
                 </div>
               </div>
               <div className="p-6">
