@@ -10,7 +10,7 @@ export function Header() {
   const [isAccountOpen, setIsAccountOpen] = useState(false);
   const [mobileProductsOpen, setMobileProductsOpen] = useState(false);
   const accountTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const { user, signOut } = useAuth();
+  const { user, signOut, isAdmin } = useAuth();
   const { itemCount } = useCart();
   const location = useLocation();
 
@@ -133,6 +133,15 @@ export function Header() {
                     <Link to="/account" className="block px-4 py-2 hover:bg-gray-50">My Account</Link>
                     <Link to="/account/orders" className="block px-4 py-2 hover:bg-gray-50">Orders</Link>
                     <Link to="/account/addresses" className="block px-4 py-2 hover:bg-gray-50">Addresses</Link>
+                    {isAdmin && (
+                      <>
+                        <div className="border-t border-gray-200 my-2"></div>
+                        <Link to="/admin" className="block px-4 py-2 hover:bg-gray-50 text-blue-600 font-medium">Admin Dashboard</Link>
+                        <Link to="/admin/media" className="block px-4 py-2 hover:bg-gray-50 text-blue-600">Media Library</Link>
+                        <Link to="/admin/content" className="block px-4 py-2 hover:bg-gray-50 text-blue-600">Content Slots</Link>
+                      </>
+                    )}
+                    <div className="border-t border-gray-200 my-2"></div>
                     <button onClick={signOut} className="block w-full text-left px-4 py-2 hover:bg-gray-50">Sign Out</button>
                   </div>
                 )}
@@ -224,15 +233,29 @@ export function Header() {
                 </div>
 
                 {user && (
-                  <div className="border-t border-gray-200 mt-2 pt-2">
-                    <div className="px-4 py-2">
-                      <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Account</h3>
+                  <>
+                    <div className="border-t border-gray-200 mt-2 pt-2">
+                      <div className="px-4 py-2">
+                        <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Account</h3>
+                      </div>
+                      <Link to="/account" onClick={closeMobileMenu} className="block px-4 py-3 text-gray-900 hover:bg-gray-50">My Account</Link>
+                      <Link to="/account/orders" onClick={closeMobileMenu} className="block px-4 py-3 text-gray-900 hover:bg-gray-50">Orders</Link>
+                      <Link to="/account/designs" onClick={closeMobileMenu} className="block px-4 py-3 text-gray-900 hover:bg-gray-50">My Designs</Link>
                     </div>
-                    <Link to="/account" onClick={closeMobileMenu} className="block px-4 py-3 text-gray-900 hover:bg-gray-50">My Account</Link>
-                    <Link to="/account/orders" onClick={closeMobileMenu} className="block px-4 py-3 text-gray-900 hover:bg-gray-50">Orders</Link>
-                    <Link to="/account/designs" onClick={closeMobileMenu} className="block px-4 py-3 text-gray-900 hover:bg-gray-50">My Designs</Link>
-                    <button onClick={() => { signOut(); closeMobileMenu(); }} className="block w-full text-left px-4 py-3 text-red-600 hover:bg-gray-50">Sign Out</button>
-                  </div>
+                    {isAdmin && (
+                      <div className="border-t border-gray-200 mt-2 pt-2">
+                        <div className="px-4 py-2">
+                          <h3 className="text-xs font-semibold text-blue-600 uppercase tracking-wider">Admin</h3>
+                        </div>
+                        <Link to="/admin" onClick={closeMobileMenu} className="block px-4 py-3 text-blue-600 hover:bg-gray-50 font-medium">Admin Dashboard</Link>
+                        <Link to="/admin/media" onClick={closeMobileMenu} className="block px-4 py-3 text-blue-600 hover:bg-gray-50">Media Library</Link>
+                        <Link to="/admin/content" onClick={closeMobileMenu} className="block px-4 py-3 text-blue-600 hover:bg-gray-50">Content Slots</Link>
+                      </div>
+                    )}
+                    <div className="border-t border-gray-200 mt-2 pt-2">
+                      <button onClick={() => { signOut(); closeMobileMenu(); }} className="block w-full text-left px-4 py-3 text-red-600 hover:bg-gray-50">Sign Out</button>
+                    </div>
+                  </>
                 )}
               </div>
             </nav>
