@@ -7,6 +7,7 @@ import { useCart } from '../../contexts/CartContext';
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProductsOpen, setIsProductsOpen] = useState(false);
+  const [isAccountOpen, setIsAccountOpen] = useState(false);
   const [mobileProductsOpen, setMobileProductsOpen] = useState(false);
   const { user, signOut } = useAuth();
   const { itemCount } = useCart();
@@ -92,16 +93,26 @@ export function Header() {
             </button>
 
             {user ? (
-              <div className="relative group">
-                <button className="flex items-center gap-2 text-gray-700 hover:text-blue-600">
+              <div className="relative">
+                <button
+                  className="flex items-center gap-2 text-gray-700 hover:text-blue-600"
+                  onMouseEnter={() => setIsAccountOpen(true)}
+                  onMouseLeave={() => setIsAccountOpen(false)}
+                >
                   <User className="w-5 h-5" />
                 </button>
-                <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg py-2 hidden group-hover:block">
-                  <Link to="/account" className="block px-4 py-2 hover:bg-gray-50">My Account</Link>
-                  <Link to="/account/orders" className="block px-4 py-2 hover:bg-gray-50">Orders</Link>
-                  <Link to="/account/addresses" className="block px-4 py-2 hover:bg-gray-50">Addresses</Link>
-                  <button onClick={signOut} className="block w-full text-left px-4 py-2 hover:bg-gray-50">Sign Out</button>
-                </div>
+                {isAccountOpen && (
+                  <div
+                    className="absolute right-0 top-full mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg py-2"
+                    onMouseEnter={() => setIsAccountOpen(true)}
+                    onMouseLeave={() => setIsAccountOpen(false)}
+                  >
+                    <Link to="/account" className="block px-4 py-2 hover:bg-gray-50">My Account</Link>
+                    <Link to="/account/orders" className="block px-4 py-2 hover:bg-gray-50">Orders</Link>
+                    <Link to="/account/addresses" className="block px-4 py-2 hover:bg-gray-50">Addresses</Link>
+                    <button onClick={signOut} className="block w-full text-left px-4 py-2 hover:bg-gray-50">Sign Out</button>
+                  </div>
+                )}
               </div>
             ) : (
               <Link to="/login" className="flex items-center gap-2 text-gray-700 hover:text-blue-600">
