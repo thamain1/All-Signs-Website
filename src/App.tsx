@@ -14,6 +14,10 @@ import { Account } from './pages/Account';
 import { Resources } from './pages/Resources';
 import { Contact } from './pages/Contact';
 import { CustomQuote } from './pages/CustomQuote';
+import { TemplateLibrary } from './pages/TemplateLibrary';
+import { DesignEditor } from './pages/DesignEditor';
+import { AccountDesigns } from './pages/AccountDesigns';
+import { ProofView } from './pages/ProofView';
 
 function App() {
   return (
@@ -41,6 +45,11 @@ function App() {
               <Route path="/custom-quote" element={<CustomQuote />} />
               <Route path="/resources" element={<Resources />} />
               <Route path="/contact" element={<Contact />} />
+
+              <Route path="/templates" element={<TemplateLibrary />} />
+              <Route path="/designs/:designId/edit" element={<DesignEditor />} />
+              <Route path="/account/designs" element={<AccountDesigns />} />
+              <Route path="/proof/:token" element={<ProofView />} />
 
               <Route path="/deals" element={<Home />} />
               <Route path="/track" element={<Home />} />

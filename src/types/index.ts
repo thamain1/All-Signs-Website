@@ -156,3 +156,107 @@ export interface PromoCode {
   valid_until: string | null;
   is_active: boolean;
 }
+
+export interface PreflightCheck {
+  checks: Array<{
+    type: string;
+    status: 'pass' | 'warn' | 'fail';
+    message: string;
+    details?: any;
+  }>;
+  warnings: string[];
+  blockers: string[];
+  passed: boolean;
+}
+
+export interface Design {
+  id: string;
+  user_id: string;
+  name: string;
+  product_id: string | null;
+  template_id: string | null;
+  product_type: string;
+  variant_snapshot: Record<string, any>;
+  width_in: number;
+  height_in: number;
+  bleed_in: number;
+  safe_zone_in: number;
+  editor_json: any;
+  preview_png_url: string | null;
+  print_pdf_url: string | null;
+  preflight_json: PreflightCheck;
+  status: 'draft' | 'ready' | 'rendering' | 'failed' | 'archived';
+  last_edited_at: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TemplateCategory {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  display_order: number;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface Template {
+  id: string;
+  name: string;
+  slug: string;
+  category_id: string | null;
+  product_type: string;
+  tags: string[];
+  thumbnail_url: string | null;
+  base_width_in: number;
+  base_height_in: number;
+  bleed_in: number;
+  safe_zone_in: number;
+  editor_json: any;
+  description: string | null;
+  is_published: boolean;
+  usage_count: number;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DesignAsset {
+  id: string;
+  design_id: string;
+  user_id: string;
+  file_name: string;
+  file_type: string;
+  file_size: number;
+  file_url: string;
+  width_px: number | null;
+  height_px: number | null;
+  thumbnail_url: string | null;
+  created_at: string;
+}
+
+export interface ProofLink {
+  id: string;
+  design_id: string;
+  order_id: string | null;
+  token: string;
+  title: string | null;
+  message: string | null;
+  expires_at: string | null;
+  created_by: string;
+  view_count: number;
+  last_viewed_at: string | null;
+  created_at: string;
+}
+
+export interface ProofComment {
+  id: string;
+  proof_link_id: string;
+  author_user_id: string | null;
+  author_name: string | null;
+  comment: string;
+  status: 'comment' | 'approved' | 'change_requested';
+  is_internal: boolean;
+  created_at: string;
+}

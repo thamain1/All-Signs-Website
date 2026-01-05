@@ -13,10 +13,16 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.57.4",
     "dotenv": "^17.2.3",
+    "fabric": "^7.1.0",
+    "lodash.debounce": "^4.0.8",
     "lucide-react": "^0.344.0",
+    "pdf-lib": "^1.17.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^7.11.0"
+    "react-dropzone": "^14.3.8",
+    "react-router-dom": "^7.11.0",
+    "uuid": "^13.0.0",
+    "zod": "^4.3.5"
   },
   "devDependencies": {
     "@eslint/js": "^9.9.1",
