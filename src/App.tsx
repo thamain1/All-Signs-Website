@@ -1,0 +1,65 @@
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { AuthProvider } from './contexts/AuthContext';
+import { CartProvider } from './contexts/CartContext';
+import { Layout } from './components/Layout/Layout';
+import { Home } from './pages/Home';
+import { ProductCategory } from './pages/ProductCategory';
+import { ProductDetail } from './pages/ProductDetail';
+import { Cart } from './pages/Cart';
+import { Checkout } from './pages/Checkout';
+import { OrderConfirmation } from './pages/OrderConfirmation';
+import { Login } from './pages/Login';
+import { Signup } from './pages/Signup';
+import { Account } from './pages/Account';
+import { Resources } from './pages/Resources';
+import { Contact } from './pages/Contact';
+import { CustomQuote } from './pages/CustomQuote';
+
+function App() {
+  return (
+    <AuthProvider>
+      <CartProvider>
+        <BrowserRouter>
+          <Layout>
+            <Routes>
+              <Route path="/" element={<Home />} />
+
+              <Route path="/products/:slug" element={<ProductCategory />} />
+              <Route path="/product/:slug" element={<ProductDetail />} />
+
+              <Route path="/cart" element={<Cart />} />
+              <Route path="/checkout" element={<Checkout />} />
+              <Route path="/order-confirmation/:orderId" element={<OrderConfirmation />} />
+
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<Signup />} />
+              <Route path="/account" element={<Account />} />
+              <Route path="/account/orders" element={<Account />} />
+              <Route path="/account/addresses" element={<Account />} />
+              <Route path="/account/profile" element={<Account />} />
+
+              <Route path="/custom-quote" element={<CustomQuote />} />
+              <Route path="/resources" element={<Resources />} />
+              <Route path="/contact" element={<Contact />} />
+
+              <Route path="/deals" element={<Home />} />
+              <Route path="/track" element={<Home />} />
+              <Route path="/shipping" element={<Resources />} />
+              <Route path="/returns" element={<Resources />} />
+              <Route path="/guarantee" element={<Resources />} />
+              <Route path="/file-setup" element={<Resources />} />
+              <Route path="/materials" element={<Resources />} />
+              <Route path="/design-tips" element={<Resources />} />
+              <Route path="/installation" element={<Resources />} />
+              <Route path="/about" element={<Contact />} />
+              <Route path="/privacy" element={<Resources />} />
+              <Route path="/terms" element={<Resources />} />
+            </Routes>
+          </Layout>
+        </BrowserRouter>
+      </CartProvider>
+    </AuthProvider>
+  );
+}
+
+export default App;
