@@ -12,6 +12,7 @@ export function Home() {
   }, []);
 
   async function loadContent() {
+    contentResolver.clearCache();
     const hero = await contentResolver.getContentSlot('home.hero.background');
     setHeroContent(hero);
 
@@ -26,7 +27,7 @@ export function Home() {
       contentResolver.getContentSlot('home.categoryTile.accessories')
     ]);
 
-    setCategoryContent({
+    const content = {
       banners: categories[0] || { fallbackPath: '/images/stock/category-banners-600.webp', alt: 'Custom vinyl banners', enabled: true },
       yardSigns: categories[1] || { fallbackPath: '/images/stock/category-yard-signs-600.webp', alt: 'Yard signs', enabled: true },
       rigidSigns: categories[2] || { fallbackPath: '/images/stock/category-rigid-signs-600.webp', alt: 'Rigid signs', enabled: true },
@@ -35,7 +36,12 @@ export function Home() {
       flags: categories[5] || { fallbackPath: '/images/stock/category-flags-600.webp', alt: 'Flags', enabled: true },
       tradeShow: categories[6] || { fallbackPath: '/images/stock/category-trade-show-600.webp', alt: 'Trade show displays', enabled: true },
       accessories: categories[7] || { fallbackPath: '/images/stock/category-accessories-600.webp', alt: 'Stakes, stands, frames, and mounting hardware', enabled: true }
-    });
+    };
+
+    console.log('Accessories content:', content.accessories);
+    console.log('Accessories image URL:', contentResolver.getImageUrl(content.accessories));
+
+    setCategoryContent(content);
   }
 
   const heroImageUrl = heroContent ? contentResolver.getImageUrl(heroContent) : '/images/stock/hero-print-studio-1600.webp';
