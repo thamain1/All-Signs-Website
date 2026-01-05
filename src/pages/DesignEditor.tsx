@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Canvas, IText, Rect, Image as FabricImage } from 'fabric';
+import { Canvas, IText, Rect, Image as FabricImage, Object as FabricObject } from 'fabric';
 import debounce from 'lodash.debounce';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -8,6 +8,20 @@ import { useCart } from '../contexts/CartContext';
 import { Design, PreflightCheck } from '../types';
 import { exportCanvasToImage, runPreflightChecks, inchesToPixels } from '../lib/designStudio';
 import { Loader2, Save, ShoppingCart, Type, Image as ImageIcon, Square, AlertTriangle, Check } from 'lucide-react';
+
+const AVAILABLE_FONTS = [
+  'Arial',
+  'Inter',
+  'Montserrat',
+  'Poppins',
+  'Oswald',
+  'Roboto Slab',
+  'Bebas Neue',
+  'Times New Roman',
+  'Courier New',
+  'Georgia',
+  'Verdana',
+];
 
 export function DesignEditor() {
   const { designId } = useParams<{ designId: string }>();
@@ -22,6 +36,8 @@ export function DesignEditor() {
   const [canvas, setCanvas] = useState<Canvas | null>(null);
   const [preflight, setPreflight] = useState<PreflightCheck | null>(null);
   const [showPreflight, setShowPreflight] = useState(false);
+  const [selectedObject, setSelectedObject] = useState<FabricObject | null>(null);
+  const [currentFont, setCurrentFont] = useState<string>('Arial');
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fabricCanvasRef = useRef<Canvas | null>(null);
@@ -64,28 +80,60 @@ export function DesignEditor() {
     setLoading(false);
   };
 
-  const initializeCanvas = () => {
+  const initializeCanvas = async () => {
     if (!canvasRef.current || !design) return;
 
+    await document.fonts.ready;
+
     const dpi = 150;
-    const widthPx = inchesToPixels(design.width_in + design.bleed_in * 2, dpi);
-    const heightPx = inchesToPixels(design.height_in + design.bleed_in * 2, dpi);
+    const widthPx = inchesToPixels(design.width_in, dpi);
+    const heightPx = inchesToPixels(design.height_in, dpi);
 
     const fabricCanvas = new Canvas(canvasRef.current, {
-      width: Math.min(widthPx, 800),
-      height: Math.min(heightPx, 600),
+      width: widthPx,
+      height: heightPx,
       backgroundColor: '#ffffff',
     });
 
-    if (design.editor_json && design.editor_json.objects) {
-      fabricCanvas.loadFromJSON(design.editor_json, () => {
-        fabricCanvas.renderAll();
+    let editorData = design.editor_json;
+    if (typeof editorData === 'string') {
+      try {
+        editorData = JSON.parse(editorData);
+      } catch (e) {
+        console.error('Failed to parse editor_json:', e);
+        editorData = null;
+      }
+    }
+
+    if (editorData && editorData.objects && editorData.objects.length > 0) {
+      await new Promise<void>((resolve) => {
+        fabricCanvas.loadFromJSON(editorData, () => {
+          fabricCanvas.renderAll();
+          resolve();
+        });
       });
     }
 
     fabricCanvas.on('object:modified', handleCanvasChange);
     fabricCanvas.on('object:added', handleCanvasChange);
     fabricCanvas.on('object:removed', handleCanvasChange);
+    fabricCanvas.on('selection:created', (e) => {
+      const obj = e.selected?.[0];
+      setSelectedObject(obj || null);
+      if (obj && obj.type === 'i-text') {
+        setCurrentFont((obj as any).fontFamily || 'Arial');
+      }
+    });
+    fabricCanvas.on('selection:updated', (e) => {
+      const obj = e.selected?.[0];
+      setSelectedObject(obj || null);
+      if (obj && obj.type === 'i-text') {
+        setCurrentFont((obj as any).fontFamily || 'Arial');
+      }
+    });
+    fabricCanvas.on('selection:cleared', () => {
+      setSelectedObject(null);
+    });
 
     fabricCanvasRef.current = fabricCanvas;
     setCanvas(fabricCanvas);
@@ -120,6 +168,17 @@ export function DesignEditor() {
       console.error('Save error:', err);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleFontChange = (fontFamily: string) => {
+    if (!fabricCanvasRef.current || !selectedObject) return;
+
+    if (selectedObject.type === 'i-text') {
+      (selectedObject as any).set('fontFamily', fontFamily);
+      fabricCanvasRef.current.renderAll();
+      setCurrentFont(fontFamily);
+      handleCanvasChange();
     }
   };
 
@@ -304,6 +363,24 @@ export function DesignEditor() {
             <Square className="w-5 h-5 text-gray-600" />
             <span>Add Rectangle</span>
           </button>
+
+          {selectedObject && selectedObject.type === 'i-text' && (
+            <div className="pt-4 border-t border-gray-200">
+              <h4 className="font-semibold text-gray-900 mb-2 text-sm">Text Properties</h4>
+              <label className="block text-sm text-gray-700 mb-1">Font Family</label>
+              <select
+                value={currentFont}
+                onChange={(e) => handleFontChange(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                {AVAILABLE_FONTS.map((font) => (
+                  <option key={font} value={font} style={{ fontFamily: font }}>
+                    {font}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div className="pt-4 border-t border-gray-200">
             <p className="text-sm text-gray-600">

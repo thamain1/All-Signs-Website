@@ -1,14 +1,26 @@
-import { Link } from 'react-router-dom';
-import { ShoppingCart, User, Search, Menu, Phone } from 'lucide-react';
-import { useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { ShoppingCart, User, Search, Menu, Phone, X, ChevronDown } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCart } from '../../contexts/CartContext';
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProductsOpen, setIsProductsOpen] = useState(false);
+  const [mobileProductsOpen, setMobileProductsOpen] = useState(false);
   const { user, signOut } = useAuth();
   const { itemCount } = useCart();
+  const location = useLocation();
+
+  useEffect(() => {
+    setIsMenuOpen(false);
+    setMobileProductsOpen(false);
+  }, [location]);
+
+  const closeMobileMenu = () => {
+    setIsMenuOpen(false);
+    setMobileProductsOpen(false);
+  };
 
   return (
     <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
@@ -116,21 +128,81 @@ export function Header() {
         </div>
 
         {isMenuOpen && (
-          <nav className="lg:hidden py-4 border-t border-gray-200">
-            <Link to="/products/banners" className="block py-2 text-gray-700 hover:text-blue-600">Banners</Link>
-            <Link to="/products/yard-signs" className="block py-2 text-gray-700 hover:text-blue-600">Yard Signs</Link>
-            <Link to="/products/rigid-signs" className="block py-2 text-gray-700 hover:text-blue-600">Rigid Signs</Link>
-            <Link to="/products/decals-stickers" className="block py-2 text-gray-700 hover:text-blue-600">Decals & Stickers</Link>
-            <Link to="/products/vehicle-graphics" className="block py-2 text-gray-700 hover:text-blue-600">Vehicle Graphics</Link>
-            <Link to="/products/flags" className="block py-2 text-gray-700 hover:text-blue-600">Flags</Link>
-            <Link to="/products/trade-show" className="block py-2 text-gray-700 hover:text-blue-600">Trade Show & Events</Link>
-            <Link to="/products/accessories" className="block py-2 text-gray-700 hover:text-blue-600">Accessories</Link>
-            <Link to="/templates" className="block py-2 text-gray-700 hover:text-blue-600 font-semibold">DIY Tool</Link>
-            <Link to="/custom-quote" className="block py-2 text-gray-700 hover:text-blue-600">Custom Quote</Link>
-            <Link to="/deals" className="block py-2 text-gray-700 hover:text-blue-600">Deals</Link>
-            <Link to="/resources" className="block py-2 text-gray-700 hover:text-blue-600">Resources</Link>
-            <Link to="/track" className="block py-2 text-gray-700 hover:text-blue-600">Track Order</Link>
-          </nav>
+          <>
+            <div
+              className="fixed inset-0 bg-black bg-opacity-50 lg:hidden z-40"
+              onClick={closeMobileMenu}
+            />
+            <nav className="fixed top-0 right-0 bottom-0 w-80 bg-white shadow-2xl lg:hidden z-50 overflow-y-auto">
+              <div className="flex items-center justify-between p-4 border-b border-gray-200">
+                <span className="text-lg font-bold text-gray-900">Menu</span>
+                <button onClick={closeMobileMenu} className="p-2 hover:bg-gray-100 rounded-lg">
+                  <X className="w-6 h-6 text-gray-600" />
+                </button>
+              </div>
+
+              <div className="py-2">
+                <div className="px-4 py-2">
+                  <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Products</h3>
+                </div>
+                <button
+                  onClick={() => setMobileProductsOpen(!mobileProductsOpen)}
+                  className="w-full flex items-center justify-between px-4 py-3 text-gray-900 hover:bg-gray-50 font-medium"
+                >
+                  <span>Browse Products</span>
+                  <ChevronDown className={`w-5 h-5 transition-transform ${mobileProductsOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {mobileProductsOpen && (
+                  <div className="bg-gray-50 py-2">
+                    <Link to="/products/banners" onClick={closeMobileMenu} className="block px-8 py-2.5 text-gray-700 hover:text-blue-600">Banners</Link>
+                    <Link to="/products/yard-signs" onClick={closeMobileMenu} className="block px-8 py-2.5 text-gray-700 hover:text-blue-600">Yard Signs</Link>
+                    <Link to="/products/rigid-signs" onClick={closeMobileMenu} className="block px-8 py-2.5 text-gray-700 hover:text-blue-600">Rigid Signs</Link>
+                    <Link to="/products/decals-stickers" onClick={closeMobileMenu} className="block px-8 py-2.5 text-gray-700 hover:text-blue-600">Decals & Stickers</Link>
+                    <Link to="/products/vehicle-graphics" onClick={closeMobileMenu} className="block px-8 py-2.5 text-gray-700 hover:text-blue-600">Vehicle Graphics</Link>
+                    <Link to="/products/flags" onClick={closeMobileMenu} className="block px-8 py-2.5 text-gray-700 hover:text-blue-600">Flags</Link>
+                    <Link to="/products/trade-show" onClick={closeMobileMenu} className="block px-8 py-2.5 text-gray-700 hover:text-blue-600">Trade Show & Events</Link>
+                    <Link to="/products/accessories" onClick={closeMobileMenu} className="block px-8 py-2.5 text-gray-700 hover:text-blue-600">Accessories</Link>
+                  </div>
+                )}
+
+                <div className="border-t border-gray-200 mt-2 pt-2">
+                  <div className="px-4 py-2">
+                    <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Services</h3>
+                  </div>
+                  <Link to="/templates" onClick={closeMobileMenu} className="block px-4 py-3 text-gray-900 hover:bg-gray-50 font-medium">DIY Tool</Link>
+                  <Link to="/custom-quote" onClick={closeMobileMenu} className="block px-4 py-3 text-gray-900 hover:bg-gray-50 font-medium">Custom Quote</Link>
+                </div>
+
+                <div className="border-t border-gray-200 mt-2 pt-2">
+                  <div className="px-4 py-2">
+                    <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Explore</h3>
+                  </div>
+                  <Link to="/deals" onClick={closeMobileMenu} className="block px-4 py-3 text-gray-900 hover:bg-gray-50">Deals</Link>
+                  <Link to="/resources" onClick={closeMobileMenu} className="block px-4 py-3 text-gray-900 hover:bg-gray-50">Resources</Link>
+                </div>
+
+                <div className="border-t border-gray-200 mt-2 pt-2">
+                  <div className="px-4 py-2">
+                    <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Support</h3>
+                  </div>
+                  <Link to="/track" onClick={closeMobileMenu} className="block px-4 py-3 text-gray-900 hover:bg-gray-50">Track Order</Link>
+                  <Link to="/contact" onClick={closeMobileMenu} className="block px-4 py-3 text-gray-900 hover:bg-gray-50">Contact & Help</Link>
+                </div>
+
+                {user && (
+                  <div className="border-t border-gray-200 mt-2 pt-2">
+                    <div className="px-4 py-2">
+                      <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Account</h3>
+                    </div>
+                    <Link to="/account" onClick={closeMobileMenu} className="block px-4 py-3 text-gray-900 hover:bg-gray-50">My Account</Link>
+                    <Link to="/account/orders" onClick={closeMobileMenu} className="block px-4 py-3 text-gray-900 hover:bg-gray-50">Orders</Link>
+                    <Link to="/account/designs" onClick={closeMobileMenu} className="block px-4 py-3 text-gray-900 hover:bg-gray-50">My Designs</Link>
+                    <button onClick={() => { signOut(); closeMobileMenu(); }} className="block w-full text-left px-4 py-3 text-red-600 hover:bg-gray-50">Sign Out</button>
+                  </div>
+                )}
+              </div>
+            </nav>
+          </>
         )}
       </div>
     </header>
