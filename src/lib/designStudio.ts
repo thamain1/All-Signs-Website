@@ -1,4 +1,4 @@
-import * as fabric from 'fabric';
+import { Canvas } from 'fabric';
 import { PDFDocument } from 'pdf-lib';
 import { PreflightCheck } from '../types';
 
@@ -44,7 +44,7 @@ export function pixelsToInches(pixels: number, dpi: number = 150): number {
 }
 
 export async function exportCanvasToImage(
-  canvas: fabric.Canvas,
+  canvas: Canvas,
   multiplier: number = 2
 ): Promise<string> {
   return canvas.toDataURL({
@@ -55,7 +55,7 @@ export async function exportCanvasToImage(
 }
 
 export async function exportCanvasToPDF(
-  canvas: fabric.Canvas,
+  canvas: Canvas,
   dimensions: CanvasDimensions
 ): Promise<Blob> {
   const dpi = 300;
@@ -86,7 +86,7 @@ export async function exportCanvasToPDF(
 }
 
 export function runPreflightChecks(
-  canvas: fabric.Canvas,
+  canvas: Canvas,
   dimensions: CanvasDimensions
 ): PreflightCheck {
   const checks: PreflightCheck['checks'] = [];

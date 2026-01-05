@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import * as fabric from 'fabric';
+import { Canvas, IText, Rect, Image as FabricImage } from 'fabric';
 import debounce from 'lodash.debounce';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -19,12 +19,12 @@ export function DesignEditor() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
-  const [canvas, setCanvas] = useState<fabric.Canvas | null>(null);
+  const [canvas, setCanvas] = useState<Canvas | null>(null);
   const [preflight, setPreflight] = useState<PreflightCheck | null>(null);
   const [showPreflight, setShowPreflight] = useState(false);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const fabricCanvasRef = useRef<fabric.Canvas | null>(null);
+  const fabricCanvasRef = useRef<Canvas | null>(null);
 
   useEffect(() => {
     if (!user) {
@@ -71,7 +71,7 @@ export function DesignEditor() {
     const widthPx = inchesToPixels(design.width_in + design.bleed_in * 2, dpi);
     const heightPx = inchesToPixels(design.height_in + design.bleed_in * 2, dpi);
 
-    const fabricCanvas = new fabric.Canvas(canvasRef.current, {
+    const fabricCanvas = new Canvas(canvasRef.current, {
       width: Math.min(widthPx, 800),
       height: Math.min(heightPx, 600),
       backgroundColor: '#ffffff',
@@ -126,7 +126,7 @@ export function DesignEditor() {
   const addText = () => {
     if (!fabricCanvasRef.current) return;
 
-    const text = new fabric.IText('Double-click to edit', {
+    const text = new IText('Double-click to edit', {
       left: 100,
       top: 100,
       fontSize: 32,
@@ -142,7 +142,7 @@ export function DesignEditor() {
   const addRectangle = () => {
     if (!fabricCanvasRef.current) return;
 
-    const rect = new fabric.Rect({
+    const rect = new Rect({
       left: 150,
       top: 150,
       width: 200,
@@ -164,7 +164,7 @@ export function DesignEditor() {
     reader.onload = (event) => {
       const imgUrl = event.target?.result as string;
 
-      fabric.Image.fromURL(imgUrl, (img) => {
+      FabricImage.fromURL(imgUrl).then((img) => {
         img.scaleToWidth(300);
         img.set({ left: 100, top: 100 });
 
