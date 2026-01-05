@@ -46,16 +46,29 @@ export default function MediaLibrary() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setUploading(true);
-    const asset = await uploadMedia({
-      file,
-      title: file.name,
-      alt_text: '',
-      tags: []
-    });
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file');
+      return;
+    }
 
-    if (asset) {
-      setAssets([asset, ...assets]);
+    setUploading(true);
+    try {
+      const asset = await uploadMedia({
+        file,
+        title: file.name,
+        alt_text: '',
+        tags: []
+      });
+
+      if (asset) {
+        setAssets([asset, ...assets]);
+        alert('Image uploaded successfully!');
+      } else {
+        alert('Failed to upload image. Please check console for details and ensure you have admin permissions.');
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      alert('Upload failed: ' + (error instanceof Error ? error.message : 'Unknown error'));
     }
 
     setUploading(false);

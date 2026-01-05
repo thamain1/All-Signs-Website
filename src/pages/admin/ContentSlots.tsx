@@ -180,11 +180,25 @@ export default function ContentSlots() {
                   >
                     <div className="flex items-start gap-4">
                       <div className="w-32 h-32 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
-                        <img
-                          src={draftValue.url || draftValue.fallbackPath}
-                          alt={draftValue.alt}
-                          className="w-full h-full object-cover"
-                        />
+                        {(draftValue.url || draftValue.fallbackPath) ? (
+                          <img
+                            src={draftValue.url || draftValue.fallbackPath}
+                            alt={draftValue.alt || 'Content image'}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              const img = e.target as HTMLImageElement;
+                              if (draftValue.fallbackPath && img.src !== draftValue.fallbackPath) {
+                                img.src = draftValue.fallbackPath;
+                              }
+                            }}
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-gray-400">
+                            <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                          </div>
+                        )}
                       </div>
 
                       <div className="flex-1">
@@ -218,9 +232,13 @@ export default function ContentSlots() {
                             {draftValue.enabled ? 'Enabled' : 'Disabled'}
                           </span>
 
-                          {draftValue.imageAssetId && (
+                          {draftValue.imageAssetId ? (
                             <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded">
-                              Custom Image
+                              Custom Upload
+                            </span>
+                          ) : (
+                            <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs font-medium rounded">
+                              Fallback Image
                             </span>
                           )}
                         </div>
@@ -251,37 +269,94 @@ export default function ContentSlots() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-3">
                       Image Source
                     </label>
-                    <select
-                      value={selectedSlot.draft_value.imageAssetId || 'fallback'}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        if (value === 'fallback') {
-                          handleUpdateSlot(selectedSlot.slot_key, {
+
+                    {mediaAssets.length === 0 ? (
+                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-3">
+                        <p className="text-sm text-yellow-800 mb-2">No uploaded images available</p>
+                        <a
+                          href="/admin/media"
+                          className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                        >
+                          Go to Media Library to upload images →
+                        </a>
+                      </div>
+                    ) : (
+                      <div className="space-y-3 mb-3">
+                        <div
+                          onClick={() => handleUpdateSlot(selectedSlot.slot_key, {
                             imageAssetId: undefined,
                             url: undefined
-                          });
-                        } else {
-                          const asset = mediaAssets.find(a => a.id === value);
-                          if (asset) {
-                            handleUpdateSlot(selectedSlot.slot_key, {
+                          })}
+                          className={`border-2 rounded-lg p-3 cursor-pointer transition-all ${
+                            !selectedSlot.draft_value.imageAssetId
+                              ? 'border-blue-500 bg-blue-50'
+                              : 'border-gray-200 hover:border-gray-300'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-16 h-16 bg-gray-100 rounded overflow-hidden flex-shrink-0">
+                              <img
+                                src={selectedSlot.draft_value.fallbackPath}
+                                alt="Fallback"
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                            <div className="flex-1">
+                              <p className="font-medium text-sm text-gray-900">Fallback Image</p>
+                              <p className="text-xs text-gray-500">{selectedSlot.draft_value.fallbackPath}</p>
+                            </div>
+                            {!selectedSlot.draft_value.imageAssetId && (
+                              <div className="w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+                                <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                </svg>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {mediaAssets.map(asset => (
+                          <div
+                            key={asset.id}
+                            onClick={() => handleUpdateSlot(selectedSlot.slot_key, {
                               imageAssetId: asset.id,
                               url: asset.url
-                            });
-                          }
-                        }
-                      }}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      <option value="fallback">Use Fallback Image</option>
-                      {mediaAssets.map(asset => (
-                        <option key={asset.id} value={asset.id}>
-                          {asset.title}
-                        </option>
-                      ))}
-                    </select>
+                            })}
+                            className={`border-2 rounded-lg p-3 cursor-pointer transition-all ${
+                              selectedSlot.draft_value.imageAssetId === asset.id
+                                ? 'border-blue-500 bg-blue-50'
+                                : 'border-gray-200 hover:border-gray-300'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="w-16 h-16 bg-gray-100 rounded overflow-hidden flex-shrink-0">
+                                <img
+                                  src={asset.url}
+                                  alt={asset.alt_text || asset.title}
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                              <div className="flex-1">
+                                <p className="font-medium text-sm text-gray-900">{asset.title}</p>
+                                <p className="text-xs text-gray-500">
+                                  {(asset.byte_size / 1024).toFixed(0)} KB • Uploaded {new Date(asset.created_at).toLocaleDateString()}
+                                </p>
+                              </div>
+                              {selectedSlot.draft_value.imageAssetId === asset.id && (
+                                <div className="w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+                                  <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                  </svg>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   <div>
@@ -333,13 +408,23 @@ export default function ContentSlots() {
                   </div>
 
                   <div className="pt-4 border-t border-gray-200">
-                    <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Image Preview
+                    </label>
+                    <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden border-2 border-gray-200">
                       <img
                         src={selectedSlot.draft_value.url || selectedSlot.draft_value.fallbackPath}
                         alt={selectedSlot.draft_value.alt}
                         className="w-full h-full object-cover"
+                        onError={(e) => {
+                          const img = e.target as HTMLImageElement;
+                          img.src = selectedSlot.draft_value.fallbackPath;
+                        }}
                       />
                     </div>
+                    <p className="text-xs text-gray-500 mt-2 text-center">
+                      This is how the image will appear on the site
+                    </p>
                   </div>
 
                   <div className="text-xs text-gray-500 space-y-1">
