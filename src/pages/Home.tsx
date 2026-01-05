@@ -4,15 +4,31 @@ import { Truck, Shield, Clock, Headphones, Award, Zap } from 'lucide-react';
 export function Home() {
   return (
     <div>
-      <section className="bg-gradient-to-br from-blue-50 to-white py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="relative bg-gray-900 py-20 lg:py-32 overflow-hidden">
+        <div className="absolute inset-0">
+          <picture>
+            <source
+              srcSet="/images/stock/hero-print-studio-1600.webp 1600w, /images/stock/hero-print-studio-1000.webp 1000w"
+              sizes="100vw"
+              type="image/webp"
+            />
+            <img
+              src="/images/stock/hero-print-studio-1600.webp"
+              alt="Professional printing studio with high-quality printing equipment"
+              className="w-full h-full object-cover"
+              loading="eager"
+            />
+          </picture>
+          <div className="absolute inset-0 bg-gradient-to-r from-gray-900/95 via-gray-900/80 to-gray-900/70"></div>
+        </div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div>
-              <h1 className="text-5xl font-bold text-gray-900 mb-6">
+            <div className="text-white">
+              <h1 className="text-5xl lg:text-6xl font-bold mb-6">
                 Professional Signs & Banners,<br />
-                <span className="text-blue-600">Delivered Fast</span>
+                <span className="text-blue-400">Delivered Fast</span>
               </h1>
-              <p className="text-xl text-gray-600 mb-8">
+              <p className="text-xl text-gray-200 mb-8">
                 High-quality custom signage for businesses and events. Transparent pricing, fast turnaround, and 100% satisfaction guaranteed.
               </p>
               <div className="flex flex-wrap gap-4">
@@ -24,24 +40,24 @@ export function Home() {
                 </Link>
                 <Link
                   to="/custom-quote"
-                  className="bg-white text-blue-600 px-8 py-4 rounded-lg font-semibold border-2 border-blue-600 hover:bg-blue-50 transition"
+                  className="bg-white text-blue-600 px-8 py-4 rounded-lg font-semibold hover:bg-gray-100 transition"
                 >
                   Get Custom Quote
                 </Link>
               </div>
-              <div className="mt-8 flex flex-wrap gap-6 text-sm text-gray-600">
+              <div className="mt-8 flex flex-wrap gap-6 text-sm text-gray-300">
                 <div className="flex items-center gap-2">
-                  <Clock className="w-5 h-5 text-blue-600" />
+                  <Clock className="w-5 h-5 text-blue-400" />
                   <span>Same-day production available</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Shield className="w-5 h-5 text-blue-600" />
+                  <Shield className="w-5 h-5 text-blue-400" />
                   <span>100% satisfaction guarantee</span>
                 </div>
               </div>
             </div>
-            <div className="relative">
-              <div className="bg-gradient-to-br from-blue-100 to-blue-50 rounded-2xl p-8 aspect-square flex items-center justify-center">
+            <div className="relative lg:block">
+              <div className="bg-white rounded-2xl p-8 shadow-2xl">
                 <div className="text-center">
                   <div className="text-6xl font-bold text-blue-600 mb-4">50%</div>
                   <div className="text-2xl font-semibold text-gray-900">First Order</div>
@@ -91,8 +107,23 @@ export function Home() {
               to="/products/banners"
               className="group bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition"
             >
-              <div className="bg-gradient-to-br from-blue-500 to-blue-600 h-48 flex items-center justify-center">
-                <span className="text-white text-6xl font-bold">Banners</span>
+              <div className="relative h-48 overflow-hidden">
+                <picture>
+                  <source
+                    srcSet="/images/stock/category-banners-900.webp 900w, /images/stock/category-banners-600.webp 600w"
+                    sizes="(min-width: 1024px) 25vw, (min-width: 768px) 50vw, 100vw"
+                    type="image/webp"
+                  />
+                  <img
+                    src="/images/stock/category-banners-900.webp"
+                    alt="Custom vinyl banners for outdoor and indoor use"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    loading="lazy"
+                  />
+                </picture>
+                <div className="absolute inset-0 bg-gradient-to-t from-gray-900/80 via-gray-900/40 to-transparent flex items-end justify-center pb-4">
+                  <span className="text-white text-3xl font-bold">Banners</span>
+                </div>
               </div>
               <div className="p-6">
                 <h3 className="text-xl font-semibold text-gray-900 mb-2 group-hover:text-blue-600 transition">
@@ -107,8 +138,23 @@ export function Home() {
               to="/products/yard-signs"
               className="group bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition"
             >
-              <div className="bg-gradient-to-br from-green-500 to-green-600 h-48 flex items-center justify-center">
-                <span className="text-white text-6xl font-bold">Signs</span>
+              <div className="relative h-48 overflow-hidden">
+                <picture>
+                  <source
+                    srcSet="/images/stock/category-yard-signs-900.webp 900w, /images/stock/category-yard-signs-600.webp 600w"
+                    sizes="(min-width: 1024px) 25vw, (min-width: 768px) 50vw, 100vw"
+                    type="image/webp"
+                  />
+                  <img
+                    src="/images/stock/category-yard-signs-900.webp"
+                    alt="Yard signs for events, campaigns, and outdoor advertising"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    loading="lazy"
+                  />
+                </picture>
+                <div className="absolute inset-0 bg-gradient-to-t from-gray-900/80 via-gray-900/40 to-transparent flex items-end justify-center pb-4">
+                  <span className="text-white text-3xl font-bold">Signs</span>
+                </div>
               </div>
               <div className="p-6">
                 <h3 className="text-xl font-semibold text-gray-900 mb-2 group-hover:text-blue-600 transition">
@@ -123,8 +169,23 @@ export function Home() {
               to="/products/rigid-signs"
               className="group bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition"
             >
-              <div className="bg-gradient-to-br from-orange-500 to-orange-600 h-48 flex items-center justify-center">
-                <span className="text-white text-6xl font-bold">Rigid</span>
+              <div className="relative h-48 overflow-hidden">
+                <picture>
+                  <source
+                    srcSet="/images/stock/category-rigid-signs-900.webp 900w, /images/stock/category-rigid-signs-600.webp 600w"
+                    sizes="(min-width: 1024px) 25vw, (min-width: 768px) 50vw, 100vw"
+                    type="image/webp"
+                  />
+                  <img
+                    src="/images/stock/category-rigid-signs-900.webp"
+                    alt="Rigid signs including PVC, aluminum, and acrylic options"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    loading="lazy"
+                  />
+                </picture>
+                <div className="absolute inset-0 bg-gradient-to-t from-gray-900/80 via-gray-900/40 to-transparent flex items-end justify-center pb-4">
+                  <span className="text-white text-3xl font-bold">Rigid</span>
+                </div>
               </div>
               <div className="p-6">
                 <h3 className="text-xl font-semibold text-gray-900 mb-2 group-hover:text-blue-600 transition">
@@ -139,8 +200,23 @@ export function Home() {
               to="/products/decals-stickers"
               className="group bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition"
             >
-              <div className="bg-gradient-to-br from-pink-500 to-pink-600 h-48 flex items-center justify-center">
-                <span className="text-white text-6xl font-bold">Decals</span>
+              <div className="relative h-48 overflow-hidden">
+                <picture>
+                  <source
+                    srcSet="/images/stock/category-decals-900.webp 900w, /images/stock/category-decals-600.webp 600w"
+                    sizes="(min-width: 1024px) 25vw, (min-width: 768px) 50vw, 100vw"
+                    type="image/webp"
+                  />
+                  <img
+                    src="/images/stock/category-decals-900.webp"
+                    alt="Custom vinyl decals and stickers for any purpose"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    loading="lazy"
+                  />
+                </picture>
+                <div className="absolute inset-0 bg-gradient-to-t from-gray-900/80 via-gray-900/40 to-transparent flex items-end justify-center pb-4">
+                  <span className="text-white text-3xl font-bold">Decals</span>
+                </div>
               </div>
               <div className="p-6">
                 <h3 className="text-xl font-semibold text-gray-900 mb-2 group-hover:text-blue-600 transition">
@@ -155,8 +231,23 @@ export function Home() {
               to="/products/vehicle-graphics"
               className="group bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition"
             >
-              <div className="bg-gradient-to-br from-red-500 to-red-600 h-48 flex items-center justify-center">
-                <span className="text-white text-6xl font-bold">Vehicle</span>
+              <div className="relative h-48 overflow-hidden">
+                <picture>
+                  <source
+                    srcSet="/images/stock/category-vehicle-900.webp 900w, /images/stock/category-vehicle-600.webp 600w"
+                    sizes="(min-width: 1024px) 25vw, (min-width: 768px) 50vw, 100vw"
+                    type="image/webp"
+                  />
+                  <img
+                    src="/images/stock/category-vehicle-900.webp"
+                    alt="Vehicle graphics including magnets, decals, and lettering"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    loading="lazy"
+                  />
+                </picture>
+                <div className="absolute inset-0 bg-gradient-to-t from-gray-900/80 via-gray-900/40 to-transparent flex items-end justify-center pb-4">
+                  <span className="text-white text-3xl font-bold">Vehicle</span>
+                </div>
               </div>
               <div className="p-6">
                 <h3 className="text-xl font-semibold text-gray-900 mb-2 group-hover:text-blue-600 transition">
@@ -171,8 +262,23 @@ export function Home() {
               to="/products/flags"
               className="group bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition"
             >
-              <div className="bg-gradient-to-br from-cyan-500 to-cyan-600 h-48 flex items-center justify-center">
-                <span className="text-white text-6xl font-bold">Flags</span>
+              <div className="relative h-48 overflow-hidden">
+                <picture>
+                  <source
+                    srcSet="/images/stock/category-flags-900.webp 900w, /images/stock/category-flags-600.webp 600w"
+                    sizes="(min-width: 1024px) 25vw, (min-width: 768px) 50vw, 100vw"
+                    type="image/webp"
+                  />
+                  <img
+                    src="/images/stock/category-flags-900.webp"
+                    alt="Custom flags including feather and teardrop flags"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    loading="lazy"
+                  />
+                </picture>
+                <div className="absolute inset-0 bg-gradient-to-t from-gray-900/80 via-gray-900/40 to-transparent flex items-end justify-center pb-4">
+                  <span className="text-white text-3xl font-bold">Flags</span>
+                </div>
               </div>
               <div className="p-6">
                 <h3 className="text-xl font-semibold text-gray-900 mb-2 group-hover:text-blue-600 transition">
@@ -187,8 +293,23 @@ export function Home() {
               to="/products/trade-show"
               className="group bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition"
             >
-              <div className="bg-gradient-to-br from-purple-500 to-purple-600 h-48 flex items-center justify-center">
-                <span className="text-white text-6xl font-bold">Event</span>
+              <div className="relative h-48 overflow-hidden">
+                <picture>
+                  <source
+                    srcSet="/images/stock/category-trade-show-900.webp 900w, /images/stock/category-trade-show-600.webp 600w"
+                    sizes="(min-width: 1024px) 25vw, (min-width: 768px) 50vw, 100vw"
+                    type="image/webp"
+                  />
+                  <img
+                    src="/images/stock/category-trade-show-900.webp"
+                    alt="Trade show displays and event signage solutions"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    loading="lazy"
+                  />
+                </picture>
+                <div className="absolute inset-0 bg-gradient-to-t from-gray-900/80 via-gray-900/40 to-transparent flex items-end justify-center pb-4">
+                  <span className="text-white text-3xl font-bold">Event</span>
+                </div>
               </div>
               <div className="p-6">
                 <h3 className="text-xl font-semibold text-gray-900 mb-2 group-hover:text-blue-600 transition">
@@ -203,8 +324,10 @@ export function Home() {
               to="/products/accessories"
               className="group bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition"
             >
-              <div className="bg-gradient-to-br from-gray-500 to-gray-600 h-48 flex items-center justify-center">
-                <span className="text-white text-6xl font-bold">Extras</span>
+              <div className="relative h-48 overflow-hidden bg-gray-100">
+                <div className="absolute inset-0 bg-gradient-to-br from-gray-500 to-gray-600 flex items-center justify-center">
+                  <span className="text-white text-4xl font-bold">Hardware</span>
+                </div>
               </div>
               <div className="p-6">
                 <h3 className="text-xl font-semibold text-gray-900 mb-2 group-hover:text-blue-600 transition">
@@ -251,35 +374,46 @@ export function Home() {
                 Learn About Turnaround Times
               </Link>
             </div>
-            <div className="bg-white rounded-xl p-8 text-gray-900">
-              <h3 className="text-2xl font-bold mb-6">Our Guarantee</h3>
-              <div className="space-y-6">
-                <div>
-                  <h4 className="font-semibold text-lg mb-2 flex items-center gap-2">
-                    <Shield className="w-5 h-5 text-blue-600" />
-                    100% Satisfaction
-                  </h4>
-                  <p className="text-gray-600">
-                    If you're not completely satisfied with your order, we'll make it right with a free reprint or full refund.
-                  </p>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-lg mb-2 flex items-center gap-2">
-                    <Award className="w-5 h-5 text-blue-600" />
-                    Premium Materials
-                  </h4>
-                  <p className="text-gray-600">
-                    We use only the highest quality materials and state-of-the-art printing technology for vibrant, long-lasting results.
-                  </p>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-lg mb-2 flex items-center gap-2">
-                    <Headphones className="w-5 h-5 text-blue-600" />
-                    Design Support
-                  </h4>
-                  <p className="text-gray-600">
-                    Our design team is here to help. Free design review with every order, plus optional design assistance available.
-                  </p>
+            <div className="bg-white rounded-xl overflow-hidden text-gray-900">
+              <div className="relative h-48">
+                <img
+                  src="/images/stock/about-craftsmanship.webp"
+                  alt="Skilled craftsman ensuring quality in sign production"
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-gray-900/60 to-transparent"></div>
+              </div>
+              <div className="p-8">
+                <h3 className="text-2xl font-bold mb-6">Our Guarantee</h3>
+                <div className="space-y-6">
+                  <div>
+                    <h4 className="font-semibold text-lg mb-2 flex items-center gap-2">
+                      <Shield className="w-5 h-5 text-blue-600" />
+                      100% Satisfaction
+                    </h4>
+                    <p className="text-gray-600">
+                      If you're not completely satisfied with your order, we'll make it right with a free reprint or full refund.
+                    </p>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-lg mb-2 flex items-center gap-2">
+                      <Award className="w-5 h-5 text-blue-600" />
+                      Premium Materials
+                    </h4>
+                    <p className="text-gray-600">
+                      We use only the highest quality materials and state-of-the-art printing technology for vibrant, long-lasting results.
+                    </p>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-lg mb-2 flex items-center gap-2">
+                      <Headphones className="w-5 h-5 text-blue-600" />
+                      Design Support
+                    </h4>
+                    <p className="text-gray-600">
+                      Our design team is here to help. Free design review with every order, plus optional design assistance available.
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
