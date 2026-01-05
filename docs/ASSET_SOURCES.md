@@ -38,7 +38,7 @@ All images are sourced from **Lorem Picsum** (https://picsum.photos/), which pro
 
 | Filename | Dimensions | Usage | Original Source |
 |----------|------------|-------|-----------------|
-| `about-craftsmanship.webp` | 800×600 | Guarantee section header image | Lorem Picsum |
+| `chatgpt_image_jan_5,_2026,_01_37_40_pm.png` | Custom | Guarantee section header image | AI Generated |
 | `about-quality.webp` | 800×600 | Quality/materials section (reserved) | Lorem Picsum |
 
 ## Image Format & Optimization

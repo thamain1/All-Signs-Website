@@ -377,8 +377,8 @@ export function Home() {
             <div className="bg-white rounded-xl overflow-hidden text-gray-900">
               <div className="relative h-48">
                 <img
-                  src="/images/stock/about-craftsmanship.webp"
-                  alt="Skilled craftsman ensuring quality in sign production"
+                  src="/images/stock/chatgpt_image_jan_5,_2026,_01_37_40_pm.png"
+                  alt="All Signs NC - Professional signage and printing services"
                   className="w-full h-full object-cover"
                   loading="lazy"
                 />
