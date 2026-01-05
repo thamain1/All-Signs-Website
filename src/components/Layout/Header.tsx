@@ -66,6 +66,7 @@ export function Header() {
                 )}
               </div>
 
+              <Link to="/templates" className="text-gray-700 hover:text-blue-600 font-medium">DIY Tool</Link>
               <Link to="/custom-quote" className="text-gray-700 hover:text-blue-600 font-medium">Custom Quote</Link>
               <Link to="/deals" className="text-gray-700 hover:text-blue-600 font-medium">Deals</Link>
               <Link to="/resources" className="text-gray-700 hover:text-blue-600 font-medium">Resources</Link>
@@ -124,6 +125,7 @@ export function Header() {
             <Link to="/products/flags" className="block py-2 text-gray-700 hover:text-blue-600">Flags</Link>
             <Link to="/products/trade-show" className="block py-2 text-gray-700 hover:text-blue-600">Trade Show & Events</Link>
             <Link to="/products/accessories" className="block py-2 text-gray-700 hover:text-blue-600">Accessories</Link>
+            <Link to="/templates" className="block py-2 text-gray-700 hover:text-blue-600 font-semibold">DIY Tool</Link>
             <Link to="/custom-quote" className="block py-2 text-gray-700 hover:text-blue-600">Custom Quote</Link>
             <Link to="/deals" className="block py-2 text-gray-700 hover:text-blue-600">Deals</Link>
             <Link to="/resources" className="block py-2 text-gray-700 hover:text-blue-600">Resources</Link>
