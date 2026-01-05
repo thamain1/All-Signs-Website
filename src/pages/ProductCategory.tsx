@@ -58,14 +58,35 @@ export function ProductCategory() {
 
   return (
     <div className="bg-gray-50 min-h-screen">
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">{category.name}</h1>
-          {category.description && (
-            <p className="text-xl text-gray-600 max-w-3xl">{category.description}</p>
-          )}
+      {category.image_url && (
+        <div className="relative h-80 bg-gray-900">
+          <img
+            src={category.image_url}
+            alt={category.name}
+            className="w-full h-full object-cover opacity-70"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-gray-900/80 to-transparent" />
+          <div className="absolute inset-0 flex items-center">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+              <h1 className="text-5xl font-bold text-white mb-4">{category.name}</h1>
+              {category.description && (
+                <p className="text-xl text-gray-100 max-w-3xl">{category.description}</p>
+              )}
+            </div>
+          </div>
         </div>
-      </div>
+      )}
+
+      {!category.image_url && (
+        <div className="bg-white border-b border-gray-200">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+            <h1 className="text-4xl font-bold text-gray-900 mb-4">{category.name}</h1>
+            {category.description && (
+              <p className="text-xl text-gray-600 max-w-3xl">{category.description}</p>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {products.length === 0 ? (
