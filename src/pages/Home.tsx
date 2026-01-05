@@ -1,35 +1,67 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Truck, Shield, Clock, Headphones, Award, Zap } from 'lucide-react';
+import { contentResolver, ContentSlotValue } from '../lib/contentResolver';
 
 export function Home() {
+  const [heroContent, setHeroContent] = useState<ContentSlotValue | null>(null);
+  const [categoryContent, setCategoryContent] = useState<Record<string, ContentSlotValue>>({});
+
+  useEffect(() => {
+    loadContent();
+  }, []);
+
+  async function loadContent() {
+    const hero = await contentResolver.getContentSlot('home.hero.background');
+    setHeroContent(hero);
+
+    const categories = await Promise.all([
+      contentResolver.getContentSlot('home.categoryTile.banners'),
+      contentResolver.getContentSlot('home.categoryTile.yardSigns'),
+      contentResolver.getContentSlot('home.categoryTile.rigidSigns'),
+      contentResolver.getContentSlot('home.categoryTile.decals'),
+      contentResolver.getContentSlot('home.categoryTile.vehicle'),
+      contentResolver.getContentSlot('home.categoryTile.flags'),
+      contentResolver.getContentSlot('home.categoryTile.tradeShow')
+    ]);
+
+    setCategoryContent({
+      banners: categories[0] || { fallbackPath: '/images/stock/category-banners-600.webp', alt: 'Custom vinyl banners', enabled: true },
+      yardSigns: categories[1] || { fallbackPath: '/images/stock/category-yard-signs-600.webp', alt: 'Yard signs', enabled: true },
+      rigidSigns: categories[2] || { fallbackPath: '/images/stock/category-rigid-signs-600.webp', alt: 'Rigid signs', enabled: true },
+      decals: categories[3] || { fallbackPath: '/images/stock/category-decals-600.webp', alt: 'Decals and stickers', enabled: true },
+      vehicle: categories[4] || { fallbackPath: '/images/stock/category-vehicle-600.webp', alt: 'Vehicle graphics', enabled: true },
+      flags: categories[5] || { fallbackPath: '/images/stock/category-flags-600.webp', alt: 'Flags', enabled: true },
+      tradeShow: categories[6] || { fallbackPath: '/images/stock/category-trade-show-600.webp', alt: 'Trade show displays', enabled: true }
+    });
+  }
+
+  const heroImageUrl = heroContent ? contentResolver.getImageUrl(heroContent) : '/images/stock/hero-print-studio-1600.webp';
+  const heroHeadline = heroContent?.headline || 'Professional Signs & Banners,';
+  const heroSubhead = heroContent?.subhead || 'High-quality custom signage for businesses and events. Transparent pricing, fast turnaround, and 100% satisfaction guaranteed.';
+  const heroAlt = heroContent?.alt || 'Professional printing studio with high-quality printing equipment';
+
   return (
     <div>
       <section className="relative bg-gray-900 py-20 lg:py-32 overflow-hidden">
         <div className="absolute inset-0">
-          <picture>
-            <source
-              srcSet="/images/stock/hero-print-studio-1600.webp 1600w, /images/stock/hero-print-studio-1000.webp 1000w"
-              sizes="100vw"
-              type="image/webp"
-            />
-            <img
-              src="/images/stock/hero-print-studio-1600.webp"
-              alt="Professional printing studio with high-quality printing equipment"
-              className="w-full h-full object-cover"
-              loading="eager"
-            />
-          </picture>
+          <img
+            src={heroImageUrl}
+            alt={heroAlt}
+            className="w-full h-full object-cover"
+            loading="eager"
+          />
           <div className="absolute inset-0 bg-gradient-to-r from-gray-900/95 via-gray-900/80 to-gray-900/70"></div>
         </div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="text-white">
               <h1 className="text-5xl lg:text-6xl font-bold mb-6">
-                Professional Signs & Banners,<br />
-                <span className="text-blue-400">Delivered Fast</span>
+                {heroHeadline.split(',')[0]},<br />
+                <span className="text-blue-400">{heroHeadline.split(',')[1] || 'Delivered Fast'}</span>
               </h1>
               <p className="text-xl text-gray-200 mb-8">
-                High-quality custom signage for businesses and events. Transparent pricing, fast turnaround, and 100% satisfaction guaranteed.
+                {heroSubhead}
               </p>
               <div className="flex flex-wrap gap-4">
                 <Link
@@ -108,19 +140,12 @@ export function Home() {
               className="group bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition"
             >
               <div className="relative h-48 overflow-hidden">
-                <picture>
-                  <source
-                    srcSet="/images/stock/category-banners-900.webp 900w, /images/stock/category-banners-600.webp 600w"
-                    sizes="(min-width: 1024px) 25vw, (min-width: 768px) 50vw, 100vw"
-                    type="image/webp"
-                  />
-                  <img
-                    src="/images/stock/category-banners-900.webp"
-                    alt="Custom vinyl banners for outdoor and indoor use"
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    loading="lazy"
-                  />
-                </picture>
+                <img
+                  src={contentResolver.getImageUrl(categoryContent.banners)}
+                  alt={categoryContent.banners?.alt || 'Custom vinyl banners'}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  loading="lazy"
+                />
                 <div className="absolute inset-0 bg-gradient-to-t from-gray-900/80 via-gray-900/40 to-transparent flex items-end justify-center pb-4">
                   <span className="text-white text-3xl font-bold">Banners</span>
                 </div>
@@ -139,19 +164,12 @@ export function Home() {
               className="group bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition"
             >
               <div className="relative h-48 overflow-hidden">
-                <picture>
-                  <source
-                    srcSet="/images/stock/category-yard-signs-900.webp 900w, /images/stock/category-yard-signs-600.webp 600w"
-                    sizes="(min-width: 1024px) 25vw, (min-width: 768px) 50vw, 100vw"
-                    type="image/webp"
-                  />
-                  <img
-                    src="/images/stock/category-yard-signs-900.webp"
-                    alt="Yard signs for events, campaigns, and outdoor advertising"
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    loading="lazy"
-                  />
-                </picture>
+                <img
+                  src={contentResolver.getImageUrl(categoryContent.yardSigns)}
+                  alt={categoryContent.yardSigns?.alt || 'Yard signs'}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  loading="lazy"
+                />
                 <div className="absolute inset-0 bg-gradient-to-t from-gray-900/80 via-gray-900/40 to-transparent flex items-end justify-center pb-4">
                   <span className="text-white text-3xl font-bold">Signs</span>
                 </div>
@@ -170,19 +188,12 @@ export function Home() {
               className="group bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition"
             >
               <div className="relative h-48 overflow-hidden">
-                <picture>
-                  <source
-                    srcSet="/images/stock/category-rigid-signs-900.webp 900w, /images/stock/category-rigid-signs-600.webp 600w"
-                    sizes="(min-width: 1024px) 25vw, (min-width: 768px) 50vw, 100vw"
-                    type="image/webp"
-                  />
-                  <img
-                    src="/images/stock/category-rigid-signs-900.webp"
-                    alt="Rigid signs including PVC, aluminum, and acrylic options"
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    loading="lazy"
-                  />
-                </picture>
+                <img
+                  src={contentResolver.getImageUrl(categoryContent.rigidSigns)}
+                  alt={categoryContent.rigidSigns?.alt || 'Rigid signs'}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  loading="lazy"
+                />
                 <div className="absolute inset-0 bg-gradient-to-t from-gray-900/80 via-gray-900/40 to-transparent flex items-end justify-center pb-4">
                   <span className="text-white text-3xl font-bold">Rigid</span>
                 </div>
@@ -201,19 +212,12 @@ export function Home() {
               className="group bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition"
             >
               <div className="relative h-48 overflow-hidden">
-                <picture>
-                  <source
-                    srcSet="/images/stock/category-decals-900.webp 900w, /images/stock/category-decals-600.webp 600w"
-                    sizes="(min-width: 1024px) 25vw, (min-width: 768px) 50vw, 100vw"
-                    type="image/webp"
-                  />
-                  <img
-                    src="/images/stock/category-decals-900.webp"
-                    alt="Custom vinyl decals and stickers for any purpose"
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    loading="lazy"
-                  />
-                </picture>
+                <img
+                  src={contentResolver.getImageUrl(categoryContent.decals)}
+                  alt={categoryContent.decals?.alt || 'Decals and stickers'}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  loading="lazy"
+                />
                 <div className="absolute inset-0 bg-gradient-to-t from-gray-900/80 via-gray-900/40 to-transparent flex items-end justify-center pb-4">
                   <span className="text-white text-3xl font-bold">Decals</span>
                 </div>
@@ -232,19 +236,12 @@ export function Home() {
               className="group bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition"
             >
               <div className="relative h-48 overflow-hidden">
-                <picture>
-                  <source
-                    srcSet="/images/stock/category-vehicle-900.webp 900w, /images/stock/category-vehicle-600.webp 600w"
-                    sizes="(min-width: 1024px) 25vw, (min-width: 768px) 50vw, 100vw"
-                    type="image/webp"
-                  />
-                  <img
-                    src="/images/stock/category-vehicle-900.webp"
-                    alt="Vehicle graphics including magnets, decals, and lettering"
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    loading="lazy"
-                  />
-                </picture>
+                <img
+                  src={contentResolver.getImageUrl(categoryContent.vehicle)}
+                  alt={categoryContent.vehicle?.alt || 'Vehicle graphics'}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  loading="lazy"
+                />
                 <div className="absolute inset-0 bg-gradient-to-t from-gray-900/80 via-gray-900/40 to-transparent flex items-end justify-center pb-4">
                   <span className="text-white text-3xl font-bold">Vehicle</span>
                 </div>
@@ -263,19 +260,12 @@ export function Home() {
               className="group bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition"
             >
               <div className="relative h-48 overflow-hidden">
-                <picture>
-                  <source
-                    srcSet="/images/stock/category-flags-900.webp 900w, /images/stock/category-flags-600.webp 600w"
-                    sizes="(min-width: 1024px) 25vw, (min-width: 768px) 50vw, 100vw"
-                    type="image/webp"
-                  />
-                  <img
-                    src="/images/stock/category-flags-900.webp"
-                    alt="Custom flags including feather and teardrop flags"
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    loading="lazy"
-                  />
-                </picture>
+                <img
+                  src={contentResolver.getImageUrl(categoryContent.flags)}
+                  alt={categoryContent.flags?.alt || 'Flags'}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  loading="lazy"
+                />
                 <div className="absolute inset-0 bg-gradient-to-t from-gray-900/80 via-gray-900/40 to-transparent flex items-end justify-center pb-4">
                   <span className="text-white text-3xl font-bold">Flags</span>
                 </div>
@@ -294,19 +284,12 @@ export function Home() {
               className="group bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition"
             >
               <div className="relative h-48 overflow-hidden">
-                <picture>
-                  <source
-                    srcSet="/images/stock/category-trade-show-900.webp 900w, /images/stock/category-trade-show-600.webp 600w"
-                    sizes="(min-width: 1024px) 25vw, (min-width: 768px) 50vw, 100vw"
-                    type="image/webp"
-                  />
-                  <img
-                    src="/images/stock/category-trade-show-900.webp"
-                    alt="Trade show displays and event signage solutions"
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    loading="lazy"
-                  />
-                </picture>
+                <img
+                  src={contentResolver.getImageUrl(categoryContent.tradeShow)}
+                  alt={categoryContent.tradeShow?.alt || 'Trade show displays'}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  loading="lazy"
+                />
                 <div className="absolute inset-0 bg-gradient-to-t from-gray-900/80 via-gray-900/40 to-transparent flex items-end justify-center pb-4">
                   <span className="text-white text-3xl font-bold">Event</span>
                 </div>

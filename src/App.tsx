@@ -18,6 +18,10 @@ import { TemplateLibrary } from './pages/TemplateLibrary';
 import { DesignEditor } from './pages/DesignEditor';
 import { AccountDesigns } from './pages/AccountDesigns';
 import { ProofView } from './pages/ProofView';
+import AdminGuard from './components/AdminGuard';
+import AdminDashboard from './pages/admin/Dashboard';
+import MediaLibrary from './pages/admin/MediaLibrary';
+import ContentSlots from './pages/admin/ContentSlots';
 
 function App() {
   return (
@@ -50,6 +54,10 @@ function App() {
               <Route path="/designs/:designId/edit" element={<DesignEditor />} />
               <Route path="/account/designs" element={<AccountDesigns />} />
               <Route path="/proof/:token" element={<ProofView />} />
+
+              <Route path="/admin" element={<AdminGuard><AdminDashboard /></AdminGuard>} />
+              <Route path="/admin/media" element={<AdminGuard><MediaLibrary /></AdminGuard>} />
+              <Route path="/admin/content" element={<AdminGuard><ContentSlots /></AdminGuard>} />
 
               <Route path="/deals" element={<Home />} />
               <Route path="/track" element={<Home />} />
