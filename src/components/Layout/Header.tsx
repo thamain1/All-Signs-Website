@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { ShoppingCart, User, Search, Menu, Phone, X, ChevronDown } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCart } from '../../contexts/CartContext';
 
@@ -9,6 +9,7 @@ export function Header() {
   const [isProductsOpen, setIsProductsOpen] = useState(false);
   const [isAccountOpen, setIsAccountOpen] = useState(false);
   const [mobileProductsOpen, setMobileProductsOpen] = useState(false);
+  const accountTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { user, signOut } = useAuth();
   const { itemCount } = useCart();
   const location = useLocation();
@@ -18,9 +19,31 @@ export function Header() {
     setMobileProductsOpen(false);
   }, [location]);
 
+  useEffect(() => {
+    return () => {
+      if (accountTimeoutRef.current) {
+        clearTimeout(accountTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const closeMobileMenu = () => {
     setIsMenuOpen(false);
     setMobileProductsOpen(false);
+  };
+
+  const handleAccountEnter = () => {
+    if (accountTimeoutRef.current) {
+      clearTimeout(accountTimeoutRef.current);
+      accountTimeoutRef.current = null;
+    }
+    setIsAccountOpen(true);
+  };
+
+  const handleAccountLeave = () => {
+    accountTimeoutRef.current = setTimeout(() => {
+      setIsAccountOpen(false);
+    }, 150);
   };
 
   return (
@@ -96,16 +119,16 @@ export function Header() {
               <div className="relative">
                 <button
                   className="flex items-center gap-2 text-gray-700 hover:text-blue-600"
-                  onMouseEnter={() => setIsAccountOpen(true)}
-                  onMouseLeave={() => setIsAccountOpen(false)}
+                  onMouseEnter={handleAccountEnter}
+                  onMouseLeave={handleAccountLeave}
                 >
                   <User className="w-5 h-5" />
                 </button>
                 {isAccountOpen && (
                   <div
                     className="absolute right-0 top-full mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg py-2"
-                    onMouseEnter={() => setIsAccountOpen(true)}
-                    onMouseLeave={() => setIsAccountOpen(false)}
+                    onMouseEnter={handleAccountEnter}
+                    onMouseLeave={handleAccountLeave}
                   >
                     <Link to="/account" className="block px-4 py-2 hover:bg-gray-50">My Account</Link>
                     <Link to="/account/orders" className="block px-4 py-2 hover:bg-gray-50">Orders</Link>
