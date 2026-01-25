@@ -38,9 +38,11 @@ export function DesignEditor() {
   const [showPreflight, setShowPreflight] = useState(false);
   const [selectedObject, setSelectedObject] = useState<FabricObject | null>(null);
   const [currentFont, setCurrentFont] = useState<string>('Arial');
+  const [canvasScale, setCanvasScale] = useState<number>(1);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fabricCanvasRef = useRef<Canvas | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!user) {
@@ -63,6 +65,28 @@ export function DesignEditor() {
     };
   }, [design]);
 
+  useEffect(() => {
+    const handleResize = () => {
+      if (!containerRef.current || !design || !fabricCanvasRef.current) return;
+
+      const dpi = 150;
+      const widthPx = inchesToPixels(design.width_in, dpi);
+      const heightPx = inchesToPixels(design.height_in, dpi);
+
+      const containerWidth = containerRef.current.clientWidth - 64;
+      const containerHeight = containerRef.current.clientHeight - 64;
+
+      const scaleX = containerWidth / widthPx;
+      const scaleY = containerHeight / heightPx;
+      const scale = Math.min(scaleX, scaleY, 1);
+
+      setCanvasScale(scale);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [design]);
+
   const loadDesign = async () => {
     const { data, error } = await supabase
       .from('designs')
@@ -81,13 +105,22 @@ export function DesignEditor() {
   };
 
   const initializeCanvas = async () => {
-    if (!canvasRef.current || !design) return;
+    if (!canvasRef.current || !design || !containerRef.current) return;
 
     await document.fonts.ready;
 
     const dpi = 150;
     const widthPx = inchesToPixels(design.width_in, dpi);
     const heightPx = inchesToPixels(design.height_in, dpi);
+
+    const containerWidth = containerRef.current.clientWidth - 64;
+    const containerHeight = containerRef.current.clientHeight - 64;
+
+    const scaleX = containerWidth / widthPx;
+    const scaleY = containerHeight / heightPx;
+    const scale = Math.min(scaleX, scaleY, 1);
+
+    setCanvasScale(scale);
 
     const fabricCanvas = new Canvas(canvasRef.current, {
       width: widthPx,
@@ -395,18 +428,11 @@ export function DesignEditor() {
           </div>
         </div>
 
-        <div className="flex-1 p-8 flex items-center justify-center overflow-auto">
+        <div ref={containerRef} className="flex-1 p-8 flex items-center justify-center overflow-hidden">
           <div className="bg-white p-4 rounded-lg shadow-lg">
-            <canvas
-              ref={canvasRef}
-              style={{
-                maxWidth: '100%',
-                maxHeight: 'calc(100vh - 200px)',
-                width: 'auto',
-                height: 'auto',
-                objectFit: 'contain'
-              }}
-            />
+            <div style={{ transform: `scale(${canvasScale})`, transformOrigin: 'center center' }}>
+              <canvas ref={canvasRef} />
+            </div>
           </div>
         </div>
       </div>
