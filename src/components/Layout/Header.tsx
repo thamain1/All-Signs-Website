@@ -10,6 +10,7 @@ export function Header() {
   const [isAccountOpen, setIsAccountOpen] = useState(false);
   const [mobileProductsOpen, setMobileProductsOpen] = useState(false);
   const accountTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const productsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { user, signOut, isAdmin } = useAuth();
   const { itemCount } = useCart();
   const location = useLocation();
@@ -24,12 +25,29 @@ export function Header() {
       if (accountTimeoutRef.current) {
         clearTimeout(accountTimeoutRef.current);
       }
+      if (productsTimeoutRef.current) {
+        clearTimeout(productsTimeoutRef.current);
+      }
     };
   }, []);
 
   const closeMobileMenu = () => {
     setIsMenuOpen(false);
     setMobileProductsOpen(false);
+  };
+
+  const handleProductsEnter = () => {
+    if (productsTimeoutRef.current) {
+      clearTimeout(productsTimeoutRef.current);
+      productsTimeoutRef.current = null;
+    }
+    setIsProductsOpen(true);
+  };
+
+  const handleProductsLeave = () => {
+    productsTimeoutRef.current = setTimeout(() => {
+      setIsProductsOpen(false);
+    }, 200);
   };
 
   const handleAccountEnter = () => {
@@ -79,8 +97,8 @@ export function Header() {
               <div className="relative">
                 <button
                   className="flex items-center gap-1 text-gray-700 hover:text-green-600 font-medium"
-                  onMouseEnter={() => setIsProductsOpen(true)}
-                  onMouseLeave={() => setIsProductsOpen(false)}
+                  onMouseEnter={handleProductsEnter}
+                  onMouseLeave={handleProductsLeave}
                 >
                   Products
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -91,8 +109,8 @@ export function Header() {
                 {isProductsOpen && (
                   <div
                     className="absolute top-full left-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg py-2"
-                    onMouseEnter={() => setIsProductsOpen(true)}
-                    onMouseLeave={() => setIsProductsOpen(false)}
+                    onMouseEnter={handleProductsEnter}
+                    onMouseLeave={handleProductsLeave}
                   >
                     <Link to="/products/banners" className="block px-4 py-2 hover:bg-gray-50">Banners</Link>
                     <Link to="/products/yard-signs" className="block px-4 py-2 hover:bg-gray-50">Yard Signs</Link>
