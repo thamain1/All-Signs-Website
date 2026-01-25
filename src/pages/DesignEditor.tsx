@@ -600,21 +600,22 @@ export function DesignEditor() {
 
               <div>
                 <label className="block text-sm text-gray-700 mb-1">Text Color</label>
-                <div className="flex gap-2 items-center">
+                <input
+                  type="text"
+                  value={currentColor}
+                  onChange={(e) => handleColorChange(e.target.value)}
+                  placeholder="#000000"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm font-mono mb-2"
+                />
+                <label className="block w-full">
+                  <span className="text-xs text-gray-600 mb-1 block">Choose Color:</span>
                   <input
                     type="color"
                     value={currentColor}
                     onChange={(e) => handleColorChange(e.target.value)}
-                    className="h-10 w-20 rounded border border-gray-300 cursor-pointer"
+                    className="w-full h-10 rounded border border-gray-300 cursor-pointer"
                   />
-                  <input
-                    type="text"
-                    value={currentColor}
-                    onChange={(e) => handleColorChange(e.target.value)}
-                    placeholder="#000000"
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm font-mono"
-                  />
-                </div>
+                </label>
               </div>
             </div>
           )}
