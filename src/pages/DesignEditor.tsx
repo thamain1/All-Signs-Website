@@ -7,7 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useCart } from '../contexts/CartContext';
 import { Design, PreflightCheck } from '../types';
 import { exportCanvasToImage, runPreflightChecks, inchesToPixels } from '../lib/designStudio';
-import { Loader2, Save, ShoppingCart, Type, Image as ImageIcon, Square, AlertTriangle, Check } from 'lucide-react';
+import { Loader2, Save, ShoppingCart, Type, Image as ImageIcon, Square, AlertTriangle, Check, Trash2, ArrowUp, ArrowDown, ChevronsUp, ChevronsDown } from 'lucide-react';
 
 const AVAILABLE_FONTS = [
   'Arial',
@@ -93,6 +93,24 @@ export function DesignEditor() {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, [design]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!fabricCanvasRef.current) return;
+
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedObject) {
+        const target = e.target as HTMLElement;
+        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+          return;
+        }
+        e.preventDefault();
+        deleteSelectedObject();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedObject]);
 
   const loadDesign = async () => {
     const { data, error } = await supabase
@@ -315,6 +333,48 @@ export function DesignEditor() {
     reader.readAsDataURL(file);
   };
 
+  const deleteSelectedObject = () => {
+    if (!fabricCanvasRef.current || !selectedObject) return;
+
+    fabricCanvasRef.current.remove(selectedObject);
+    fabricCanvasRef.current.discardActiveObject();
+    fabricCanvasRef.current.renderAll();
+    setSelectedObject(null);
+    handleCanvasChange();
+  };
+
+  const bringToFront = () => {
+    if (!fabricCanvasRef.current || !selectedObject) return;
+
+    fabricCanvasRef.current.bringObjectToFront(selectedObject);
+    fabricCanvasRef.current.renderAll();
+    handleCanvasChange();
+  };
+
+  const sendToBack = () => {
+    if (!fabricCanvasRef.current || !selectedObject) return;
+
+    fabricCanvasRef.current.sendObjectToBack(selectedObject);
+    fabricCanvasRef.current.renderAll();
+    handleCanvasChange();
+  };
+
+  const bringForward = () => {
+    if (!fabricCanvasRef.current || !selectedObject) return;
+
+    fabricCanvasRef.current.bringObjectForward(selectedObject);
+    fabricCanvasRef.current.renderAll();
+    handleCanvasChange();
+  };
+
+  const sendBackward = () => {
+    if (!fabricCanvasRef.current || !selectedObject) return;
+
+    fabricCanvasRef.current.sendObjectBackwards(selectedObject);
+    fabricCanvasRef.current.renderAll();
+    handleCanvasChange();
+  };
+
   const runPreflight = () => {
     if (!fabricCanvasRef.current || !design) return;
 
@@ -458,6 +518,58 @@ export function DesignEditor() {
                   </option>
                 ))}
               </select>
+            </div>
+          )}
+
+          {selectedObject && (
+            <div className="pt-4 border-t border-gray-200 space-y-2">
+              <h4 className="font-semibold text-gray-900 mb-2 text-sm">Layer Controls</h4>
+
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={bringToFront}
+                  className="flex items-center justify-center gap-2 px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm"
+                  title="Bring to Front"
+                >
+                  <ChevronsUp className="w-4 h-4" />
+                  <span>Front</span>
+                </button>
+
+                <button
+                  onClick={sendToBack}
+                  className="flex items-center justify-center gap-2 px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm"
+                  title="Send to Back"
+                >
+                  <ChevronsDown className="w-4 h-4" />
+                  <span>Back</span>
+                </button>
+
+                <button
+                  onClick={bringForward}
+                  className="flex items-center justify-center gap-2 px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm"
+                  title="Bring Forward"
+                >
+                  <ArrowUp className="w-4 h-4" />
+                  <span>Forward</span>
+                </button>
+
+                <button
+                  onClick={sendBackward}
+                  className="flex items-center justify-center gap-2 px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm"
+                  title="Send Backward"
+                >
+                  <ArrowDown className="w-4 h-4" />
+                  <span>Backward</span>
+                </button>
+              </div>
+
+              <button
+                onClick={deleteSelectedObject}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-50 text-red-600 border border-red-200 rounded-lg hover:bg-red-100"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Delete (Del/Backspace)</span>
+              </button>
             </div>
           )}
 
