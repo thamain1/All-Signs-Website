@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { useCart } from '../contexts/CartContext';
 import { Product, ProductOption, PricingRule } from '../types';
 import { Loader2, ShoppingCart, Check, Info } from 'lucide-react';
+import SizeSelector from '../components/SizeSelector';
 
 export function ProductDetail() {
   const { slug } = useParams<{ slug: string }>();
@@ -192,7 +193,19 @@ export function ProductDetail() {
               )}
 
               <div className="space-y-6">
-                {product.allows_custom_size && (
+                {product.size_preset_category ? (
+                  <SizeSelector
+                    categorySlug={product.size_preset_category}
+                    selectedWidth={parseFloat(width)}
+                    selectedHeight={parseFloat(height)}
+                    onSizeChange={(w, h) => {
+                      setWidth(w.toString());
+                      setHeight(h.toString());
+                    }}
+                    allowCustomSize={product.allows_custom_size}
+                    showLegibilityGuide={true}
+                  />
+                ) : product.allows_custom_size ? (
                   <div>
                     <label className="block text-sm font-semibold text-gray-900 mb-2">
                       Size (Width x Height in inches)
@@ -222,7 +235,7 @@ export function ProductDetail() {
                       </div>
                     </div>
                   </div>
-                )}
+                ) : null}
 
                 {Object.entries(groupedOptions).map(([type, opts]) => (
                   <div key={type}>

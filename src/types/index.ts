@@ -25,6 +25,7 @@ export interface Product {
   max_height: number | null;
   production_days_min: number;
   production_days_max: number;
+  size_preset_category: string | null;
   seo_title: string | null;
   seo_description: string | null;
 }

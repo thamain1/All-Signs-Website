@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2, Package, DollarSign, Settings } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { STANDARD_SIZE_PRESETS } from '../../lib/sizePresets';
 
 type Product = {
   id: string;
@@ -18,6 +19,7 @@ type Product = {
   max_height: number | null;
   production_days_min: number;
   production_days_max: number;
+  size_preset_category: string | null;
   category?: { name: string };
 };
 
@@ -445,6 +447,7 @@ function ProductFormModal({
     name: product?.name || '',
     slug: product?.slug || '',
     category_id: product?.category_id || '',
+    size_preset_category: product?.size_preset_category || '',
     description: product?.description || '',
     short_description: product?.short_description || '',
     image_urls: product?.image_urls?.join('\n') || '',
@@ -481,6 +484,7 @@ function ProductFormModal({
       name: formData.name,
       slug: formData.slug,
       category_id: formData.category_id || null,
+      size_preset_category: formData.size_preset_category || null,
       description: formData.description,
       short_description: formData.short_description,
       image_urls: imageUrls,
@@ -573,6 +577,29 @@ function ProductFormModal({
                   </option>
                 ))}
               </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Size Preset Category
+              </label>
+              <select
+                value={formData.size_preset_category}
+                onChange={(e) =>
+                  setFormData({ ...formData, size_preset_category: e.target.value })
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              >
+                <option value="">No size presets</option>
+                {STANDARD_SIZE_PRESETS.map((preset) => (
+                  <option key={preset.categorySlug} value={preset.categorySlug}>
+                    {preset.categoryName}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                Choose a size preset category to enable standardized size options for customers
+              </p>
             </div>
 
             <div className="flex items-center gap-4">
