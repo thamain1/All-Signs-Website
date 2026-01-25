@@ -81,6 +81,13 @@ export function DesignEditor() {
       const scale = Math.min(scaleX, scaleY, 1);
 
       setCanvasScale(scale);
+
+      fabricCanvasRef.current.setZoom(scale);
+      fabricCanvasRef.current.setDimensions({
+        width: widthPx * scale,
+        height: heightPx * scale,
+      });
+      fabricCanvasRef.current.renderAll();
     };
 
     window.addEventListener('resize', handleResize);
@@ -123,9 +130,15 @@ export function DesignEditor() {
     setCanvasScale(scale);
 
     const fabricCanvas = new Canvas(canvasRef.current, {
-      width: widthPx,
-      height: heightPx,
+      width: widthPx * scale,
+      height: heightPx * scale,
       backgroundColor: '#ffffff',
+    });
+
+    fabricCanvas.setZoom(scale);
+    fabricCanvas.setDimensions({
+      width: widthPx * scale,
+      height: heightPx * scale,
     });
 
     let editorData = design.editor_json;
@@ -182,8 +195,28 @@ export function DesignEditor() {
     setSaving(true);
 
     try {
+      const currentZoom = fabricCanvasRef.current.getZoom();
+      const currentWidth = fabricCanvasRef.current.width;
+      const currentHeight = fabricCanvasRef.current.height;
+
+      fabricCanvasRef.current.setZoom(1);
+      const dpi = 150;
+      const widthPx = inchesToPixels(design.width_in, dpi);
+      const heightPx = inchesToPixels(design.height_in, dpi);
+      fabricCanvasRef.current.setDimensions({
+        width: widthPx,
+        height: heightPx,
+      });
+
       const editorJson = fabricCanvasRef.current.toJSON();
       const previewImage = await exportCanvasToImage(fabricCanvasRef.current, 0.5);
+
+      fabricCanvasRef.current.setZoom(currentZoom);
+      fabricCanvasRef.current.setDimensions({
+        width: currentWidth || widthPx * currentZoom,
+        height: currentHeight || heightPx * currentZoom,
+      });
+      fabricCanvasRef.current.renderAll();
 
       const { error } = await supabase
         .from('designs')
@@ -216,12 +249,16 @@ export function DesignEditor() {
   };
 
   const addText = () => {
-    if (!fabricCanvasRef.current) return;
+    if (!fabricCanvasRef.current || !design) return;
+
+    const dpi = 150;
+    const widthPx = inchesToPixels(design.width_in, dpi);
+    const heightPx = inchesToPixels(design.height_in, dpi);
 
     const text = new IText('Double-click to edit', {
-      left: 100,
-      top: 100,
-      fontSize: 32,
+      left: widthPx * 0.1,
+      top: heightPx * 0.1,
+      fontSize: widthPx * 0.04,
       fill: '#000000',
       fontFamily: 'Arial',
     });
@@ -232,13 +269,17 @@ export function DesignEditor() {
   };
 
   const addRectangle = () => {
-    if (!fabricCanvasRef.current) return;
+    if (!fabricCanvasRef.current || !design) return;
+
+    const dpi = 150;
+    const widthPx = inchesToPixels(design.width_in, dpi);
+    const heightPx = inchesToPixels(design.height_in, dpi);
 
     const rect = new Rect({
-      left: 150,
-      top: 150,
-      width: 200,
-      height: 100,
+      left: widthPx * 0.15,
+      top: heightPx * 0.15,
+      width: widthPx * 0.2,
+      height: heightPx * 0.1,
       fill: '#3B82F6',
     });
 
@@ -248,7 +289,7 @@ export function DesignEditor() {
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || !e.target.files[0] || !fabricCanvasRef.current) return;
+    if (!e.target.files || !e.target.files[0] || !fabricCanvasRef.current || !design) return;
 
     const file = e.target.files[0];
     const reader = new FileReader();
@@ -256,9 +297,14 @@ export function DesignEditor() {
     reader.onload = (event) => {
       const imgUrl = event.target?.result as string;
 
+      const dpi = 150;
+      const widthPx = inchesToPixels(design.width_in, dpi);
+      const heightPx = inchesToPixels(design.height_in, dpi);
+
       FabricImage.fromURL(imgUrl).then((img) => {
-        img.scaleToWidth(300);
-        img.set({ left: 100, top: 100 });
+        const maxWidth = widthPx * 0.3;
+        img.scaleToWidth(maxWidth);
+        img.set({ left: widthPx * 0.1, top: heightPx * 0.1 });
 
         fabricCanvasRef.current?.add(img);
         fabricCanvasRef.current?.setActiveObject(img);
@@ -430,9 +476,7 @@ export function DesignEditor() {
 
         <div ref={containerRef} className="flex-1 p-8 flex items-center justify-center overflow-hidden">
           <div className="bg-white p-4 rounded-lg shadow-lg">
-            <div style={{ transform: `scale(${canvasScale})`, transformOrigin: 'center center' }}>
-              <canvas ref={canvasRef} />
-            </div>
+            <canvas ref={canvasRef} />
           </div>
         </div>
       </div>
