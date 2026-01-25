@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Image, FileText, Users, Settings } from 'lucide-react';
+import { Image, FileText, Users, Settings, Package } from 'lucide-react';
 
 export default function AdminDashboard() {
   return (
@@ -37,6 +37,21 @@ export default function AdminDashboard() {
               <div>
                 <h2 className="text-xl font-semibold text-gray-900">Content Manager</h2>
                 <p className="text-gray-600 text-sm mt-1">Edit site content and text</p>
+              </div>
+            </div>
+          </Link>
+
+          <Link
+            to="/admin/products"
+            className="bg-white rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                <Package className="w-6 h-6 text-green-600" />
+              </div>
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900">Products</h2>
+                <p className="text-gray-600 text-sm mt-1">Manage product catalog</p>
               </div>
             </div>
           </Link>

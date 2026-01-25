@@ -159,6 +159,7 @@ export function Header() {
                       <>
                         <div className="border-t border-gray-200 my-2"></div>
                         <Link to="/admin" className="block px-4 py-2 hover:bg-gray-50 text-green-600 font-medium">Admin Dashboard</Link>
+                        <Link to="/admin/products" className="block px-4 py-2 hover:bg-gray-50 text-green-600">Products</Link>
                         <Link to="/admin/media" className="block px-4 py-2 hover:bg-gray-50 text-green-600">Media Library</Link>
                         <Link to="/admin/content" className="block px-4 py-2 hover:bg-gray-50 text-green-600">Content Slots</Link>
                       </>
@@ -270,6 +271,7 @@ export function Header() {
                           <h3 className="text-xs font-semibold text-green-600 uppercase tracking-wider">Admin</h3>
                         </div>
                         <Link to="/admin" onClick={closeMobileMenu} className="block px-4 py-3 text-green-600 hover:bg-gray-50 font-medium">Admin Dashboard</Link>
+                        <Link to="/admin/products" onClick={closeMobileMenu} className="block px-4 py-3 text-green-600 hover:bg-gray-50">Products</Link>
                         <Link to="/admin/media" onClick={closeMobileMenu} className="block px-4 py-3 text-green-600 hover:bg-gray-50">Media Library</Link>
                         <Link to="/admin/content" onClick={closeMobileMenu} className="block px-4 py-3 text-green-600 hover:bg-gray-50">Content Slots</Link>
                       </div>
