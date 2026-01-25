@@ -40,6 +40,7 @@ export function DesignEditor() {
   const [showPreflight, setShowPreflight] = useState(false);
   const [selectedObject, setSelectedObject] = useState<FabricObject | null>(null);
   const [currentFont, setCurrentFont] = useState<string>('Arial');
+  const [currentColor, setCurrentColor] = useState<string>('#000000');
   const [canvasScale, setCanvasScale] = useState<number>(1);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -201,6 +202,7 @@ export function DesignEditor() {
       setSelectedObject(obj || null);
       if (obj && obj.type === 'i-text') {
         setCurrentFont((obj as any).fontFamily || 'Arial');
+        setCurrentColor((obj as any).fill || '#000000');
       }
     });
     fabricCanvas.on('selection:updated', (e) => {
@@ -208,6 +210,7 @@ export function DesignEditor() {
       setSelectedObject(obj || null);
       if (obj && obj.type === 'i-text') {
         setCurrentFont((obj as any).fontFamily || 'Arial');
+        setCurrentColor((obj as any).fill || '#000000');
       }
     });
     fabricCanvas.on('selection:cleared', () => {
@@ -277,6 +280,17 @@ export function DesignEditor() {
       (selectedObject as any).set('fontFamily', fontFamily);
       fabricCanvasRef.current.renderAll();
       setCurrentFont(fontFamily);
+      handleCanvasChange();
+    }
+  };
+
+  const handleColorChange = (color: string) => {
+    if (!fabricCanvasRef.current || !selectedObject) return;
+
+    if (selectedObject.type === 'i-text') {
+      (selectedObject as any).set('fill', color);
+      fabricCanvasRef.current.renderAll();
+      setCurrentColor(color);
       handleCanvasChange();
     }
   };
@@ -566,20 +580,42 @@ export function DesignEditor() {
           </button>
 
           {selectedObject && selectedObject.type === 'i-text' && (
-            <div className="pt-4 border-t border-gray-200">
+            <div className="pt-4 border-t border-gray-200 space-y-3">
               <h4 className="font-semibold text-gray-900 mb-2 text-sm">Text Properties</h4>
-              <label className="block text-sm text-gray-700 mb-1">Font Family</label>
-              <select
-                value={currentFont}
-                onChange={(e) => handleFontChange(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-              >
-                {AVAILABLE_FONTS.map((font) => (
-                  <option key={font} value={font} style={{ fontFamily: font }}>
-                    {font}
-                  </option>
-                ))}
-              </select>
+
+              <div>
+                <label className="block text-sm text-gray-700 mb-1">Font Family</label>
+                <select
+                  value={currentFont}
+                  onChange={(e) => handleFontChange(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                >
+                  {AVAILABLE_FONTS.map((font) => (
+                    <option key={font} value={font} style={{ fontFamily: font }}>
+                      {font}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm text-gray-700 mb-1">Text Color</label>
+                <div className="flex gap-2 items-center">
+                  <input
+                    type="color"
+                    value={currentColor}
+                    onChange={(e) => handleColorChange(e.target.value)}
+                    className="h-10 w-20 rounded border border-gray-300 cursor-pointer"
+                  />
+                  <input
+                    type="text"
+                    value={currentColor}
+                    onChange={(e) => handleColorChange(e.target.value)}
+                    placeholder="#000000"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm font-mono"
+                  />
+                </div>
+              </div>
             </div>
           )}
 
