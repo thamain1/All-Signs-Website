@@ -5,9 +5,10 @@ import debounce from 'lodash.debounce';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useCart } from '../contexts/CartContext';
-import { Design, PreflightCheck } from '../types';
+import { Design, PreflightCheck, Product } from '../types';
 import { exportCanvasToImage, runPreflightChecks, inchesToPixels } from '../lib/designStudio';
 import { Loader2, Save, ShoppingCart, Type, Image as ImageIcon, Square, AlertTriangle, Check, Trash2, ArrowUp, ArrowDown, ChevronsUp, ChevronsDown } from 'lucide-react';
+import SizeSelector from '../components/SizeSelector';
 
 const AVAILABLE_FONTS = [
   'Arial',
@@ -30,6 +31,7 @@ export function DesignEditor() {
   const navigate = useNavigate();
 
   const [design, setDesign] = useState<Design | null>(null);
+  const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
@@ -126,6 +128,19 @@ export function DesignEditor() {
     }
 
     setDesign(data);
+
+    if (data.product_id) {
+      const { data: productData } = await supabase
+        .from('products')
+        .select('*')
+        .eq('id', data.product_id)
+        .maybeSingle();
+
+      if (productData) {
+        setProduct(productData);
+      }
+    }
+
     setLoading(false);
   };
 
@@ -389,6 +404,53 @@ export function DesignEditor() {
     setShowPreflight(true);
   };
 
+  const handleSizeChange = async (newWidth: number, newHeight: number) => {
+    if (!design || !fabricCanvasRef.current || !containerRef.current) return;
+
+    const updatedDesign = {
+      ...design,
+      width_in: newWidth,
+      height_in: newHeight,
+    };
+
+    setDesign(updatedDesign);
+
+    const { error } = await supabase
+      .from('designs')
+      .update({
+        width_in: newWidth,
+        height_in: newHeight,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', design.id);
+
+    if (error) {
+      console.error('Error updating design size:', error);
+      return;
+    }
+
+    const currentZoom = fabricCanvasRef.current.getZoom();
+    const dpi = 150;
+    const widthPx = inchesToPixels(newWidth, dpi);
+    const heightPx = inchesToPixels(newHeight, dpi);
+
+    const containerWidth = containerRef.current.clientWidth - 64;
+    const containerHeight = containerRef.current.clientHeight - 64;
+
+    const scaleX = containerWidth / widthPx;
+    const scaleY = containerHeight / heightPx;
+    const scale = Math.min(scaleX, scaleY, 1);
+
+    setCanvasScale(scale);
+
+    fabricCanvasRef.current.setZoom(scale);
+    fabricCanvasRef.current.setDimensions({
+      width: widthPx * scale,
+      height: heightPx * scale,
+    });
+    fabricCanvasRef.current.renderAll();
+  };
+
   const handleAddToCart = async () => {
     if (!design || !fabricCanvasRef.current) return;
 
@@ -573,16 +635,67 @@ export function DesignEditor() {
             </div>
           )}
 
-          <div className="pt-4 border-t border-gray-200">
-            <p className="text-sm text-gray-600">
-              Size: {design?.width_in}" × {design?.height_in}"
-            </p>
-            <p className="text-sm text-gray-600">
-              Bleed: {design?.bleed_in}"
-            </p>
-            <p className="text-sm text-gray-600">
-              Safe Zone: {design?.safe_zone_in}"
-            </p>
+          <div className="pt-4 border-t border-gray-200 space-y-4">
+            <div>
+              <h4 className="font-semibold text-gray-900 mb-3 text-sm">Select Size</h4>
+              {product?.size_preset_category ? (
+                <SizeSelector
+                  categorySlug={product.size_preset_category}
+                  selectedWidth={design?.width_in}
+                  selectedHeight={design?.height_in}
+                  onSizeChange={handleSizeChange}
+                  allowCustomSize={true}
+                  showLegibilityGuide={false}
+                />
+              ) : (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">
+                        Width (inches)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        min="0.1"
+                        value={design?.width_in || ''}
+                        onChange={(e) => {
+                          const val = parseFloat(e.target.value);
+                          if (!isNaN(val) && val > 0 && design) {
+                            handleSizeChange(val, design.height_in);
+                          }
+                        }}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">
+                        Height (inches)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        min="0.1"
+                        value={design?.height_in || ''}
+                        onChange={(e) => {
+                          const val = parseFloat(e.target.value);
+                          if (!isNaN(val) && val > 0 && design) {
+                            handleSizeChange(design.width_in, val);
+                          }
+                        }}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="pt-3 border-t border-gray-200">
+              <p className="text-xs text-gray-500 mb-1">Print Specifications</p>
+              <p className="text-xs text-gray-600">
+                Bleed: {design?.bleed_in}" | Safe Zone: {design?.safe_zone_in}"
+              </p>
+            </div>
           </div>
         </div>
 
