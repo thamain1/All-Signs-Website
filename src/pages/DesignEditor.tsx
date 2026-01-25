@@ -333,8 +333,8 @@ export function DesignEditor() {
         </div>
       </div>
 
-      <div className="flex">
-        <div className="w-64 bg-white border-r border-gray-200 p-4 space-y-2">
+      <div className="flex h-[calc(100vh-60px)]">
+        <div className="w-64 bg-white border-r border-gray-200 p-4 space-y-2 overflow-y-auto">
           <h3 className="font-semibold text-gray-900 mb-4">Tools</h3>
 
           <button
@@ -395,9 +395,18 @@ export function DesignEditor() {
           </div>
         </div>
 
-        <div className="flex-1 p-8 flex items-center justify-center">
+        <div className="flex-1 p-8 flex items-center justify-center overflow-auto">
           <div className="bg-white p-4 rounded-lg shadow-lg">
-            <canvas ref={canvasRef} />
+            <canvas
+              ref={canvasRef}
+              style={{
+                maxWidth: '100%',
+                maxHeight: 'calc(100vh - 200px)',
+                width: 'auto',
+                height: 'auto',
+                objectFit: 'contain'
+              }}
+            />
           </div>
         </div>
       </div>
