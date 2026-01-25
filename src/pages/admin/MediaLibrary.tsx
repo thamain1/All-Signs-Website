@@ -113,7 +113,7 @@ export default function MediaLibrary() {
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Media Library</h1>
 
-          <label className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer transition-colors">
+          <label className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 cursor-pointer transition-colors">
             <Upload className="w-5 h-5" />
             {uploading ? 'Uploading...' : 'Upload Image'}
             <input
@@ -134,14 +134,14 @@ export default function MediaLibrary() {
               placeholder="Search by title, alt text, or tags..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
             />
           </div>
 
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as any)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
           >
             <option value="active">Active</option>
             <option value="archived">Archived</option>
@@ -157,7 +157,7 @@ export default function MediaLibrary() {
                   key={asset.id}
                   onClick={() => setSelectedAsset(asset)}
                   className={`bg-white rounded-lg shadow-sm overflow-hidden cursor-pointer transition-all hover:shadow-md ${
-                    selectedAsset?.id === asset.id ? 'ring-2 ring-blue-500' : ''
+                    selectedAsset?.id === asset.id ? 'ring-2 ring-green-500' : ''
                   }`}
                 >
                   <div className="aspect-square bg-gray-100 relative">
@@ -209,7 +209,7 @@ export default function MediaLibrary() {
                       type="text"
                       value={selectedAsset.title}
                       onChange={(e) => handleUpdateAsset(selectedAsset.id, { title: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                     />
                   </div>
 
@@ -221,7 +221,7 @@ export default function MediaLibrary() {
                       value={selectedAsset.alt_text}
                       onChange={(e) => handleUpdateAsset(selectedAsset.id, { alt_text: e.target.value })}
                       rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                     />
                   </div>
 
@@ -235,7 +235,7 @@ export default function MediaLibrary() {
                       onChange={(e) => handleUpdateAsset(selectedAsset.id, {
                         tags: e.target.value.split(',').map(t => t.trim()).filter(Boolean)
                       })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                     />
                   </div>
 

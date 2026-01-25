@@ -42,7 +42,7 @@ export function ProductCategory() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+        <Loader2 className="w-8 h-8 animate-spin text-green-600" />
       </div>
     );
   }
@@ -51,7 +51,7 @@ export function ProductCategory() {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
         <h1 className="text-3xl font-bold text-gray-900 mb-4">Category Not Found</h1>
-        <Link to="/" className="text-blue-600 hover:underline">Return to Home</Link>
+        <Link to="/" className="text-green-600 hover:underline">Return to Home</Link>
       </div>
     );
   }
@@ -92,7 +92,7 @@ export function ProductCategory() {
         {products.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-gray-600 mb-4">No products available in this category yet.</p>
-            <Link to="/custom-quote" className="text-blue-600 hover:underline">
+            <Link to="/custom-quote" className="text-green-600 hover:underline">
               Request a custom quote instead
             </Link>
           </div>
@@ -116,14 +116,14 @@ export function ProductCategory() {
                   )}
                 </div>
                 <div className="p-6">
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2 group-hover:text-blue-600 transition">
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2 group-hover:text-green-600 transition">
                     {product.name}
                   </h3>
                   {product.short_description && (
                     <p className="text-gray-600 text-sm mb-4">{product.short_description}</p>
                   )}
                   <div className="flex justify-between items-center">
-                    <span className="text-blue-600 font-semibold">Configure & Price</span>
+                    <span className="text-green-600 font-semibold">Configure & Price</span>
                     <span className="text-sm text-gray-500">
                       {product.production_days_min}-{product.production_days_max} day turnaround
                     </span>

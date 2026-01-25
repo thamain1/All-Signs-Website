@@ -42,7 +42,7 @@ export function Account() {
             to="/account/orders"
             className="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition"
           >
-            <Package className="w-10 h-10 text-blue-600 mb-4" />
+            <Package className="w-10 h-10 text-green-600 mb-4" />
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Orders</h3>
             <p className="text-gray-600 text-sm">View and track your orders</p>
           </Link>
@@ -51,7 +51,7 @@ export function Account() {
             to="/account/addresses"
             className="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition"
           >
-            <MapPin className="w-10 h-10 text-blue-600 mb-4" />
+            <MapPin className="w-10 h-10 text-green-600 mb-4" />
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Addresses</h3>
             <p className="text-gray-600 text-sm">Manage shipping addresses</p>
           </Link>
@@ -60,7 +60,7 @@ export function Account() {
             to="/account/profile"
             className="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition"
           >
-            <UserIcon className="w-10 h-10 text-blue-600 mb-4" />
+            <UserIcon className="w-10 h-10 text-green-600 mb-4" />
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Profile</h3>
             <p className="text-gray-600 text-sm">Update your information</p>
           </Link>
@@ -75,7 +75,7 @@ export function Account() {
               <p className="text-gray-600 mb-4">You haven't placed any orders yet.</p>
               <Link
                 to="/"
-                className="inline-block bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-blue-700 transition"
+                className="inline-block bg-green-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-green-700 transition"
               >
                 Start Shopping
               </Link>
@@ -88,7 +88,7 @@ export function Account() {
                     <div>
                       <Link
                         to={`/account/orders/${order.id}`}
-                        className="text-lg font-semibold text-blue-600 hover:text-blue-700"
+                        className="text-lg font-semibold text-green-600 hover:text-green-700"
                       >
                         Order #{order.order_number}
                       </Link>
@@ -105,7 +105,7 @@ export function Account() {
                           order.status === 'delivered'
                             ? 'bg-green-100 text-green-800'
                             : order.status === 'shipped'
-                            ? 'bg-blue-100 text-blue-800'
+                            ? 'bg-green-100 text-green-800'
                             : 'bg-yellow-100 text-yellow-800'
                         }`}
                       >

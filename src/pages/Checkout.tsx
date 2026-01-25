@@ -116,7 +116,7 @@ export function Checkout() {
 
               <div className="bg-white rounded-xl p-6 shadow-sm">
                 <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-                  <Truck className="w-6 h-6 text-blue-600" />
+                  <Truck className="w-6 h-6 text-green-600" />
                   Shipping Information
                 </h2>
                 <div className="grid md:grid-cols-2 gap-4">
@@ -129,7 +129,7 @@ export function Checkout() {
                       value={formData.fullName}
                       onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
                       required
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:border-transparent"
                     />
                   </div>
                   <div>
@@ -140,7 +140,7 @@ export function Checkout() {
                       type="text"
                       value={formData.company}
                       onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:border-transparent"
                     />
                   </div>
                   <div className="md:col-span-2">
@@ -152,7 +152,7 @@ export function Checkout() {
                       value={formData.address1}
                       onChange={(e) => setFormData({ ...formData, address1: e.target.value })}
                       required
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:border-transparent"
                     />
                   </div>
                   <div className="md:col-span-2">
@@ -163,7 +163,7 @@ export function Checkout() {
                       type="text"
                       value={formData.address2}
                       onChange={(e) => setFormData({ ...formData, address2: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:border-transparent"
                     />
                   </div>
                   <div>
@@ -175,7 +175,7 @@ export function Checkout() {
                       value={formData.city}
                       onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                       required
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:border-transparent"
                     />
                   </div>
                   <div>
@@ -187,7 +187,7 @@ export function Checkout() {
                       value={formData.state}
                       onChange={(e) => setFormData({ ...formData, state: e.target.value })}
                       required
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:border-transparent"
                     />
                   </div>
                   <div>
@@ -199,7 +199,7 @@ export function Checkout() {
                       value={formData.zipCode}
                       onChange={(e) => setFormData({ ...formData, zipCode: e.target.value })}
                       required
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:border-transparent"
                     />
                   </div>
                   <div>
@@ -211,7 +211,7 @@ export function Checkout() {
                       value={formData.phone}
                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                       required
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:border-transparent"
                     />
                   </div>
                 </div>
@@ -221,7 +221,7 @@ export function Checkout() {
                 <h2 className="text-xl font-bold text-gray-900 mb-6">Shipping Method</h2>
                 <div className="space-y-3">
                   <label className={`flex items-center justify-between p-4 border-2 rounded-lg cursor-pointer transition ${
-                    formData.shippingMethod === 'ground' ? 'border-blue-600 bg-blue-50' : 'border-gray-200'
+                    formData.shippingMethod === 'ground' ? 'border-green-600 bg-green-50' : 'border-gray-200'
                   }`}>
                     <div className="flex items-center gap-3">
                       <input
@@ -229,7 +229,7 @@ export function Checkout() {
                         name="shipping"
                         checked={formData.shippingMethod === 'ground'}
                         onChange={() => setFormData({ ...formData, shippingMethod: 'ground' })}
-                        className="text-blue-600"
+                        className="text-green-600"
                       />
                       <div>
                         <div className="font-medium">Ground Shipping</div>
@@ -240,7 +240,7 @@ export function Checkout() {
                   </label>
 
                   <label className={`flex items-center justify-between p-4 border-2 rounded-lg cursor-pointer transition ${
-                    formData.shippingMethod === 'express' ? 'border-blue-600 bg-blue-50' : 'border-gray-200'
+                    formData.shippingMethod === 'express' ? 'border-green-600 bg-green-50' : 'border-gray-200'
                   }`}>
                     <div className="flex items-center gap-3">
                       <input
@@ -248,7 +248,7 @@ export function Checkout() {
                         name="shipping"
                         checked={formData.shippingMethod === 'express'}
                         onChange={() => setFormData({ ...formData, shippingMethod: 'express' })}
-                        className="text-blue-600"
+                        className="text-green-600"
                       />
                       <div>
                         <div className="font-medium">Express Shipping</div>
@@ -259,7 +259,7 @@ export function Checkout() {
                   </label>
 
                   <label className={`flex items-center justify-between p-4 border-2 rounded-lg cursor-pointer transition ${
-                    formData.shippingMethod === 'overnight' ? 'border-blue-600 bg-blue-50' : 'border-gray-200'
+                    formData.shippingMethod === 'overnight' ? 'border-green-600 bg-green-50' : 'border-gray-200'
                   }`}>
                     <div className="flex items-center gap-3">
                       <input
@@ -267,7 +267,7 @@ export function Checkout() {
                         name="shipping"
                         checked={formData.shippingMethod === 'overnight'}
                         onChange={() => setFormData({ ...formData, shippingMethod: 'overnight' })}
-                        className="text-blue-600"
+                        className="text-green-600"
                       />
                       <div>
                         <div className="font-medium">Overnight Shipping</div>
@@ -281,11 +281,11 @@ export function Checkout() {
 
               <div className="bg-white rounded-xl p-6 shadow-sm">
                 <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-                  <CreditCard className="w-6 h-6 text-blue-600" />
+                  <CreditCard className="w-6 h-6 text-green-600" />
                   Payment Information
                 </h2>
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                  <p className="text-blue-900 text-sm">
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                  <p className="text-green-900 text-sm">
                     Payment processing with Stripe will be integrated in the production version.
                     For now, orders are created without payment.
                   </p>
@@ -295,7 +295,7 @@ export function Checkout() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-blue-600 text-white py-4 rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
+                className="w-full bg-green-600 text-white py-4 rounded-lg font-semibold hover:bg-green-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {loading ? (
                   <>
@@ -328,7 +328,7 @@ export function Checkout() {
                 <div className="border-t border-gray-200 pt-3">
                   <div className="flex justify-between">
                     <span className="text-lg font-semibold text-gray-900">Total</span>
-                    <span className="text-2xl font-bold text-blue-600">${totalAmount.toFixed(2)}</span>
+                    <span className="text-2xl font-bold text-green-600">${totalAmount.toFixed(2)}</span>
                   </div>
                 </div>
               </div>

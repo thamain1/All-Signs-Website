@@ -14,7 +14,7 @@ export function Contact() {
             <h2 className="text-2xl font-bold text-gray-900 mb-6">Get In Touch</h2>
             <div className="space-y-6">
               <div className="flex items-start gap-4">
-                <Phone className="w-6 h-6 text-blue-600 flex-shrink-0 mt-1" />
+                <Phone className="w-6 h-6 text-green-600 flex-shrink-0 mt-1" />
                 <div>
                   <h3 className="font-semibold text-gray-900 mb-1">Phone</h3>
                   <p className="text-gray-600">1-800-ALL-SIGN</p>
@@ -23,7 +23,7 @@ export function Contact() {
               </div>
 
               <div className="flex items-start gap-4">
-                <Mail className="w-6 h-6 text-blue-600 flex-shrink-0 mt-1" />
+                <Mail className="w-6 h-6 text-green-600 flex-shrink-0 mt-1" />
                 <div>
                   <h3 className="font-semibold text-gray-900 mb-1">Email</h3>
                   <p className="text-gray-600">support@allsignsnc.com</p>
@@ -32,7 +32,7 @@ export function Contact() {
               </div>
 
               <div className="flex items-start gap-4">
-                <MapPin className="w-6 h-6 text-blue-600 flex-shrink-0 mt-1" />
+                <MapPin className="w-6 h-6 text-green-600 flex-shrink-0 mt-1" />
                 <div>
                   <h3 className="font-semibold text-gray-900 mb-1">Address</h3>
                   <p className="text-gray-600">
@@ -43,7 +43,7 @@ export function Contact() {
               </div>
 
               <div className="flex items-start gap-4">
-                <Clock className="w-6 h-6 text-blue-600 flex-shrink-0 mt-1" />
+                <Clock className="w-6 h-6 text-green-600 flex-shrink-0 mt-1" />
                 <div>
                   <h3 className="font-semibold text-gray-900 mb-1">Business Hours</h3>
                   <p className="text-gray-600">
@@ -63,33 +63,33 @@ export function Contact() {
                 <label className="block text-sm font-semibold text-gray-900 mb-2">Name</label>
                 <input
                   type="text"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:border-transparent"
                 />
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-900 mb-2">Email</label>
                 <input
                   type="email"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:border-transparent"
                 />
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-900 mb-2">Subject</label>
                 <input
                   type="text"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:border-transparent"
                 />
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-900 mb-2">Message</label>
                 <textarea
                   rows={5}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:border-transparent"
                 ></textarea>
               </div>
               <button
                 type="submit"
-                className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition"
+                className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition"
               >
                 Send Message
               </button>

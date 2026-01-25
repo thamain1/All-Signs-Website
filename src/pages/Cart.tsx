@@ -14,7 +14,7 @@ export function Cart() {
           <p className="text-gray-600 mb-8">Start adding some great signage to your cart!</p>
           <Link
             to="/"
-            className="inline-block bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-blue-700 transition"
+            className="inline-block bg-green-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-green-700 transition"
           >
             Browse Products
           </Link>
@@ -110,19 +110,19 @@ export function Cart() {
                 <div className="border-t border-gray-200 pt-3">
                   <div className="flex justify-between">
                     <span className="text-lg font-semibold text-gray-900">Total</span>
-                    <span className="text-2xl font-bold text-blue-600">${subtotal.toFixed(2)}</span>
+                    <span className="text-2xl font-bold text-green-600">${subtotal.toFixed(2)}</span>
                   </div>
                 </div>
               </div>
               <Link
                 to="/checkout"
-                className="block w-full bg-blue-600 text-white text-center py-3 rounded-lg font-semibold hover:bg-blue-700 transition mb-3"
+                className="block w-full bg-green-600 text-white text-center py-3 rounded-lg font-semibold hover:bg-green-700 transition mb-3"
               >
                 Proceed to Checkout
               </Link>
               <Link
                 to="/"
-                className="block w-full text-center text-blue-600 hover:text-blue-700 font-medium"
+                className="block w-full text-center text-green-600 hover:text-green-700 font-medium"
               >
                 Continue Shopping
               </Link>

@@ -14,45 +14,45 @@ export function Resources() {
 
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
           <div className="bg-white rounded-xl p-6 shadow-sm">
-            <FileText className="w-10 h-10 text-blue-600 mb-4" />
+            <FileText className="w-10 h-10 text-green-600 mb-4" />
             <h3 className="text-xl font-semibold text-gray-900 mb-2">File Setup Guide</h3>
             <p className="text-gray-600 text-sm mb-4">
               Learn about resolution, bleed, safe areas, and color modes for print-ready files.
             </p>
-            <Link to="/file-setup" className="text-blue-600 hover:text-blue-700 font-semibold text-sm">
+            <Link to="/file-setup" className="text-green-600 hover:text-green-700 font-semibold text-sm">
               Read More →
             </Link>
           </div>
 
           <div className="bg-white rounded-xl p-6 shadow-sm">
-            <Image className="w-10 h-10 text-blue-600 mb-4" />
+            <Image className="w-10 h-10 text-green-600 mb-4" />
             <h3 className="text-xl font-semibold text-gray-900 mb-2">Material Guide</h3>
             <p className="text-gray-600 text-sm mb-4">
               Compare materials like vinyl, mesh, PVC, aluminum, and more to choose the right option.
             </p>
-            <Link to="/materials" className="text-blue-600 hover:text-blue-700 font-semibold text-sm">
+            <Link to="/materials" className="text-green-600 hover:text-green-700 font-semibold text-sm">
               Read More →
             </Link>
           </div>
 
           <div className="bg-white rounded-xl p-6 shadow-sm">
-            <Ruler className="w-10 h-10 text-blue-600 mb-4" />
+            <Ruler className="w-10 h-10 text-green-600 mb-4" />
             <h3 className="text-xl font-semibold text-gray-900 mb-2">Design Tips</h3>
             <p className="text-gray-600 text-sm mb-4">
               Best practices for creating effective signage that gets noticed and delivers results.
             </p>
-            <Link to="/design-tips" className="text-blue-600 hover:text-blue-700 font-semibold text-sm">
+            <Link to="/design-tips" className="text-green-600 hover:text-green-700 font-semibold text-sm">
               Read More →
             </Link>
           </div>
 
           <div className="bg-white rounded-xl p-6 shadow-sm">
-            <Package className="w-10 h-10 text-blue-600 mb-4" />
+            <Package className="w-10 h-10 text-green-600 mb-4" />
             <h3 className="text-xl font-semibold text-gray-900 mb-2">Installation Tips</h3>
             <p className="text-gray-600 text-sm mb-4">
               Step-by-step instructions for installing different types of signs and banners.
             </p>
-            <Link to="/installation" className="text-blue-600 hover:text-blue-700 font-semibold text-sm">
+            <Link to="/installation" className="text-green-600 hover:text-green-700 font-semibold text-sm">
               Read More →
             </Link>
           </div>

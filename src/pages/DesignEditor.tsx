@@ -286,7 +286,7 @@ export function DesignEditor() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+        <Loader2 className="w-8 h-8 animate-spin text-green-600" />
       </div>
     );
   }
@@ -325,7 +325,7 @@ export function DesignEditor() {
           </button>
           <button
             onClick={handleAddToCart}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+            className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
           >
             <ShoppingCart className="w-4 h-4" />
             Add to Cart
@@ -371,7 +371,7 @@ export function DesignEditor() {
               <select
                 value={currentFont}
                 onChange={(e) => handleFontChange(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
               >
                 {AVAILABLE_FONTS.map((font) => (
                   <option key={font} value={font} style={{ fontFamily: font }}>
@@ -447,7 +447,7 @@ export function DesignEditor() {
               {preflight.passed && (
                 <button
                   onClick={handleAddToCart}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
                 >
                   Continue to Cart
                 </button>

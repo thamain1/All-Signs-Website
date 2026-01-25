@@ -128,7 +128,7 @@ export function ProductDetail() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+        <Loader2 className="w-8 h-8 animate-spin text-green-600" />
       </div>
     );
   }
@@ -137,7 +137,7 @@ export function ProductDetail() {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
         <h1 className="text-3xl font-bold text-gray-900 mb-4">Product Not Found</h1>
-        <Link to="/" className="text-blue-600 hover:underline">Return to Home</Link>
+        <Link to="/" className="text-green-600 hover:underline">Return to Home</Link>
       </div>
     );
   }
@@ -170,12 +170,12 @@ export function ProductDetail() {
               )}
             </div>
 
-            <div className="mt-6 bg-blue-50 border border-blue-200 rounded-xl p-6">
-              <h3 className="font-semibold text-blue-900 mb-3 flex items-center gap-2">
+            <div className="mt-6 bg-green-50 border border-green-200 rounded-xl p-6">
+              <h3 className="font-semibold text-green-900 mb-3 flex items-center gap-2">
                 <Check className="w-5 h-5" />
                 Our Guarantee
               </h3>
-              <ul className="space-y-2 text-sm text-blue-800">
+              <ul className="space-y-2 text-sm text-green-800">
                 <li>100% Satisfaction Guarantee</li>
                 <li>Free Design Review</li>
                 <li>Premium Quality Materials</li>
@@ -205,7 +205,7 @@ export function ProductDetail() {
                           onChange={(e) => setWidth(e.target.value)}
                           min={product.min_width || 1}
                           max={product.max_width || 1000}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:border-transparent"
                           placeholder="Width"
                         />
                       </div>
@@ -216,7 +216,7 @@ export function ProductDetail() {
                           onChange={(e) => setHeight(e.target.value)}
                           min={product.min_height || 1}
                           max={product.max_height || 1000}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:border-transparent"
                           placeholder="Height"
                         />
                       </div>
@@ -235,7 +235,7 @@ export function ProductDetail() {
                           key={opt.id}
                           className={`flex items-center justify-between p-4 border-2 rounded-lg cursor-pointer transition ${
                             selectedOptions[type] === opt.id
-                              ? 'border-blue-600 bg-blue-50'
+                              ? 'border-green-600 bg-green-50'
                               : 'border-gray-200 hover:border-gray-300'
                           }`}
                         >
@@ -245,7 +245,7 @@ export function ProductDetail() {
                               name={type}
                               checked={selectedOptions[type] === opt.id}
                               onChange={() => setSelectedOptions({ ...selectedOptions, [type]: opt.id })}
-                              className="text-blue-600"
+                              className="text-green-600"
                             />
                             <div>
                               <div className="font-medium text-gray-900">{opt.value}</div>
@@ -271,14 +271,14 @@ export function ProductDetail() {
                   </label>
                   <div className="space-y-2">
                     <label className={`flex items-center justify-between p-4 border-2 rounded-lg cursor-pointer transition ${
-                      productionSpeed === 'standard' ? 'border-blue-600 bg-blue-50' : 'border-gray-200'
+                      productionSpeed === 'standard' ? 'border-green-600 bg-green-50' : 'border-gray-200'
                     }`}>
                       <div className="flex items-center gap-3">
                         <input
                           type="radio"
                           checked={productionSpeed === 'standard'}
                           onChange={() => setProductionSpeed('standard')}
-                          className="text-blue-600"
+                          className="text-green-600"
                         />
                         <div>
                           <div className="font-medium">Standard</div>
@@ -287,14 +287,14 @@ export function ProductDetail() {
                       </div>
                     </label>
                     <label className={`flex items-center justify-between p-4 border-2 rounded-lg cursor-pointer transition ${
-                      productionSpeed === 'rush' ? 'border-blue-600 bg-blue-50' : 'border-gray-200'
+                      productionSpeed === 'rush' ? 'border-green-600 bg-green-50' : 'border-gray-200'
                     }`}>
                       <div className="flex items-center gap-3">
                         <input
                           type="radio"
                           checked={productionSpeed === 'rush'}
                           onChange={() => setProductionSpeed('rush')}
-                          className="text-blue-600"
+                          className="text-green-600"
                         />
                         <div>
                           <div className="font-medium">Rush</div>
@@ -315,7 +315,7 @@ export function ProductDetail() {
                     value={quantity}
                     onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
                     min="1"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:border-transparent"
                   />
                   {pricingRules.length > 0 && (
                     <div className="mt-2 text-sm text-gray-600">
@@ -333,12 +333,12 @@ export function ProductDetail() {
                 </div>
                 <div className="flex justify-between items-center mb-6">
                   <span className="text-gray-900 font-semibold">Total:</span>
-                  <span className="text-3xl font-bold text-blue-600">${totalPrice.toFixed(2)}</span>
+                  <span className="text-3xl font-bold text-green-600">${totalPrice.toFixed(2)}</span>
                 </div>
                 <button
                   onClick={handleAddToCart}
                   disabled={adding}
-                  className="w-full bg-blue-600 text-white py-4 rounded-lg font-semibold hover:bg-blue-700 transition flex items-center justify-center gap-2 disabled:opacity-50"
+                  className="w-full bg-green-600 text-white py-4 rounded-lg font-semibold hover:bg-green-700 transition flex items-center justify-center gap-2 disabled:opacity-50"
                 >
                   {adding ? (
                     <>

@@ -48,7 +48,7 @@ export function Header() {
 
   return (
     <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
-      <div className="bg-blue-600 text-white py-2">
+      <div className="bg-green-600 text-white py-2">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center text-sm">
           <div className="flex items-center gap-2">
             <Phone className="w-4 h-4" />
@@ -68,13 +68,17 @@ export function Header() {
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center gap-8">
             <Link to="/" className="flex items-center">
-              <span className="text-2xl font-bold text-blue-600">All Signs NC</span>
+              <img
+                src="/images/allsignslogo.jpg"
+                alt="All Signs - Signs, Printing & More"
+                className="h-12 w-auto"
+              />
             </Link>
 
             <nav className="hidden lg:flex items-center gap-6">
               <div className="relative">
                 <button
-                  className="flex items-center gap-1 text-gray-700 hover:text-blue-600 font-medium"
+                  className="flex items-center gap-1 text-gray-700 hover:text-green-600 font-medium"
                   onMouseEnter={() => setIsProductsOpen(true)}
                   onMouseLeave={() => setIsProductsOpen(false)}
                 >
@@ -102,23 +106,23 @@ export function Header() {
                 )}
               </div>
 
-              <Link to="/templates" className="text-gray-700 hover:text-blue-600 font-medium">DIY Tool</Link>
-              <Link to="/custom-quote" className="text-gray-700 hover:text-blue-600 font-medium">Custom Quote</Link>
-              <Link to="/deals" className="text-gray-700 hover:text-blue-600 font-medium">Deals</Link>
-              <Link to="/resources" className="text-gray-700 hover:text-blue-600 font-medium">Resources</Link>
-              <Link to="/track" className="text-gray-700 hover:text-blue-600 font-medium">Track Order</Link>
+              <Link to="/templates" className="text-gray-700 hover:text-green-600 font-medium">DIY Tool</Link>
+              <Link to="/custom-quote" className="text-gray-700 hover:text-green-600 font-medium">Custom Quote</Link>
+              <Link to="/deals" className="text-gray-700 hover:text-green-600 font-medium">Deals</Link>
+              <Link to="/resources" className="text-gray-700 hover:text-green-600 font-medium">Resources</Link>
+              <Link to="/track" className="text-gray-700 hover:text-green-600 font-medium">Track Order</Link>
             </nav>
           </div>
 
           <div className="flex items-center gap-4">
-            <button className="hidden md:flex items-center gap-2 text-gray-700 hover:text-blue-600">
+            <button className="hidden md:flex items-center gap-2 text-gray-700 hover:text-green-600">
               <Search className="w-5 h-5" />
             </button>
 
             {user ? (
               <div className="relative">
                 <button
-                  className="flex items-center gap-2 text-gray-700 hover:text-blue-600"
+                  className="flex items-center gap-2 text-gray-700 hover:text-green-600"
                   onMouseEnter={handleAccountEnter}
                   onMouseLeave={handleAccountLeave}
                 >
@@ -136,9 +140,9 @@ export function Header() {
                     {isAdmin && (
                       <>
                         <div className="border-t border-gray-200 my-2"></div>
-                        <Link to="/admin" className="block px-4 py-2 hover:bg-gray-50 text-blue-600 font-medium">Admin Dashboard</Link>
-                        <Link to="/admin/media" className="block px-4 py-2 hover:bg-gray-50 text-blue-600">Media Library</Link>
-                        <Link to="/admin/content" className="block px-4 py-2 hover:bg-gray-50 text-blue-600">Content Slots</Link>
+                        <Link to="/admin" className="block px-4 py-2 hover:bg-gray-50 text-green-600 font-medium">Admin Dashboard</Link>
+                        <Link to="/admin/media" className="block px-4 py-2 hover:bg-gray-50 text-green-600">Media Library</Link>
+                        <Link to="/admin/content" className="block px-4 py-2 hover:bg-gray-50 text-green-600">Content Slots</Link>
                       </>
                     )}
                     <div className="border-t border-gray-200 my-2"></div>
@@ -147,15 +151,15 @@ export function Header() {
                 )}
               </div>
             ) : (
-              <Link to="/login" className="flex items-center gap-2 text-gray-700 hover:text-blue-600">
+              <Link to="/login" className="flex items-center gap-2 text-gray-700 hover:text-green-600">
                 <User className="w-5 h-5" />
               </Link>
             )}
 
-            <Link to="/cart" className="relative flex items-center gap-2 text-gray-700 hover:text-blue-600">
+            <Link to="/cart" className="relative flex items-center gap-2 text-gray-700 hover:text-green-600">
               <ShoppingCart className="w-5 h-5" />
               {itemCount > 0 && (
-                <span className="absolute -top-2 -right-2 bg-blue-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                <span className="absolute -top-2 -right-2 bg-green-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
                   {itemCount}
                 </span>
               )}
@@ -197,14 +201,14 @@ export function Header() {
                 </button>
                 {mobileProductsOpen && (
                   <div className="bg-gray-50 py-2">
-                    <Link to="/products/banners" onClick={closeMobileMenu} className="block px-8 py-2.5 text-gray-700 hover:text-blue-600">Banners</Link>
-                    <Link to="/products/yard-signs" onClick={closeMobileMenu} className="block px-8 py-2.5 text-gray-700 hover:text-blue-600">Yard Signs</Link>
-                    <Link to="/products/rigid-signs" onClick={closeMobileMenu} className="block px-8 py-2.5 text-gray-700 hover:text-blue-600">Rigid Signs</Link>
-                    <Link to="/products/decals-stickers" onClick={closeMobileMenu} className="block px-8 py-2.5 text-gray-700 hover:text-blue-600">Decals & Stickers</Link>
-                    <Link to="/products/vehicle-graphics" onClick={closeMobileMenu} className="block px-8 py-2.5 text-gray-700 hover:text-blue-600">Vehicle Graphics</Link>
-                    <Link to="/products/flags" onClick={closeMobileMenu} className="block px-8 py-2.5 text-gray-700 hover:text-blue-600">Flags</Link>
-                    <Link to="/products/trade-show" onClick={closeMobileMenu} className="block px-8 py-2.5 text-gray-700 hover:text-blue-600">Trade Show & Events</Link>
-                    <Link to="/products/accessories" onClick={closeMobileMenu} className="block px-8 py-2.5 text-gray-700 hover:text-blue-600">Accessories</Link>
+                    <Link to="/products/banners" onClick={closeMobileMenu} className="block px-8 py-2.5 text-gray-700 hover:text-green-600">Banners</Link>
+                    <Link to="/products/yard-signs" onClick={closeMobileMenu} className="block px-8 py-2.5 text-gray-700 hover:text-green-600">Yard Signs</Link>
+                    <Link to="/products/rigid-signs" onClick={closeMobileMenu} className="block px-8 py-2.5 text-gray-700 hover:text-green-600">Rigid Signs</Link>
+                    <Link to="/products/decals-stickers" onClick={closeMobileMenu} className="block px-8 py-2.5 text-gray-700 hover:text-green-600">Decals & Stickers</Link>
+                    <Link to="/products/vehicle-graphics" onClick={closeMobileMenu} className="block px-8 py-2.5 text-gray-700 hover:text-green-600">Vehicle Graphics</Link>
+                    <Link to="/products/flags" onClick={closeMobileMenu} className="block px-8 py-2.5 text-gray-700 hover:text-green-600">Flags</Link>
+                    <Link to="/products/trade-show" onClick={closeMobileMenu} className="block px-8 py-2.5 text-gray-700 hover:text-green-600">Trade Show & Events</Link>
+                    <Link to="/products/accessories" onClick={closeMobileMenu} className="block px-8 py-2.5 text-gray-700 hover:text-green-600">Accessories</Link>
                   </div>
                 )}
 
@@ -245,11 +249,11 @@ export function Header() {
                     {isAdmin && (
                       <div className="border-t border-gray-200 mt-2 pt-2">
                         <div className="px-4 py-2">
-                          <h3 className="text-xs font-semibold text-blue-600 uppercase tracking-wider">Admin</h3>
+                          <h3 className="text-xs font-semibold text-green-600 uppercase tracking-wider">Admin</h3>
                         </div>
-                        <Link to="/admin" onClick={closeMobileMenu} className="block px-4 py-3 text-blue-600 hover:bg-gray-50 font-medium">Admin Dashboard</Link>
-                        <Link to="/admin/media" onClick={closeMobileMenu} className="block px-4 py-3 text-blue-600 hover:bg-gray-50">Media Library</Link>
-                        <Link to="/admin/content" onClick={closeMobileMenu} className="block px-4 py-3 text-blue-600 hover:bg-gray-50">Content Slots</Link>
+                        <Link to="/admin" onClick={closeMobileMenu} className="block px-4 py-3 text-green-600 hover:bg-gray-50 font-medium">Admin Dashboard</Link>
+                        <Link to="/admin/media" onClick={closeMobileMenu} className="block px-4 py-3 text-green-600 hover:bg-gray-50">Media Library</Link>
+                        <Link to="/admin/content" onClick={closeMobileMenu} className="block px-4 py-3 text-green-600 hover:bg-gray-50">Content Slots</Link>
                       </div>
                     )}
                     <div className="border-t border-gray-200 mt-2 pt-2">

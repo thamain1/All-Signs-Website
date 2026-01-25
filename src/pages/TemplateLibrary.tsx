@@ -99,7 +99,7 @@ export function TemplateLibrary() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+        <Loader2 className="w-8 h-8 animate-spin text-green-600" />
       </div>
     );
   }
@@ -119,7 +119,7 @@ export function TemplateLibrary() {
             onClick={() => setSelectedCategory(null)}
             className={`px-4 py-2 rounded-lg whitespace-nowrap ${
               selectedCategory === null
-                ? 'bg-blue-600 text-white'
+                ? 'bg-green-600 text-white'
                 : 'bg-white text-gray-700 hover:bg-gray-50'
             }`}
           >
@@ -131,7 +131,7 @@ export function TemplateLibrary() {
               onClick={() => setSelectedCategory(cat.id)}
               className={`px-4 py-2 rounded-lg whitespace-nowrap ${
                 selectedCategory === cat.id
-                  ? 'bg-blue-600 text-white'
+                  ? 'bg-green-600 text-white'
                   : 'bg-white text-gray-700 hover:bg-gray-50'
               }`}
             >
@@ -143,9 +143,9 @@ export function TemplateLibrary() {
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           <button
             onClick={() => createDesignFromTemplate(null)}
-            className="bg-white rounded-xl p-8 border-2 border-dashed border-gray-300 hover:border-blue-600 hover:bg-blue-50 transition flex flex-col items-center justify-center min-h-[300px] group"
+            className="bg-white rounded-xl p-8 border-2 border-dashed border-gray-300 hover:border-green-600 hover:bg-green-50 transition flex flex-col items-center justify-center min-h-[300px] group"
           >
-            <Plus className="w-16 h-16 text-gray-400 group-hover:text-blue-600 mb-4" />
+            <Plus className="w-16 h-16 text-gray-400 group-hover:text-green-600 mb-4" />
             <h3 className="text-xl font-semibold text-gray-900 mb-2">Start from Blank</h3>
             <p className="text-gray-600 text-center">Create your design from scratch</p>
           </button>

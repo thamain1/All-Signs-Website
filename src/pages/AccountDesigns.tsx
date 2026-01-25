@@ -93,7 +93,7 @@ export function AccountDesigns() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+        <Loader2 className="w-8 h-8 animate-spin text-green-600" />
       </div>
     );
   }
@@ -108,7 +108,7 @@ export function AccountDesigns() {
           </div>
           <Link
             to="/templates"
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold flex items-center gap-2"
+            className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold flex items-center gap-2"
           >
             <Plus className="w-5 h-5" />
             New Design
@@ -120,7 +120,7 @@ export function AccountDesigns() {
             <p className="text-gray-600 mb-4">You haven't created any designs yet.</p>
             <Link
               to="/templates"
-              className="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700"
+              className="inline-block bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700"
             >
               Create Your First Design
             </Link>
@@ -153,7 +153,7 @@ export function AccountDesigns() {
                   <div className="flex gap-2">
                     <Link
                       to={`/designs/${design.id}/edit`}
-                      className="flex-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm flex items-center justify-center gap-1"
+                      className="flex-1 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm flex items-center justify-center gap-1"
                     >
                       <Edit className="w-4 h-4" />
                       Edit

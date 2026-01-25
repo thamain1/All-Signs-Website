@@ -16,8 +16,8 @@ export default function AdminDashboard() {
             className="bg-white rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow"
           >
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <Image className="w-6 h-6 text-blue-600" />
+              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                <Image className="w-6 h-6 text-green-600" />
               </div>
               <div>
                 <h2 className="text-xl font-semibold text-gray-900">Media Library</h2>
@@ -66,9 +66,9 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-blue-900 mb-2">Getting Started</h3>
-          <ul className="space-y-2 text-blue-800">
+        <div className="mt-8 bg-green-50 border border-green-200 rounded-lg p-6">
+          <h3 className="text-lg font-semibold text-green-900 mb-2">Getting Started</h3>
+          <ul className="space-y-2 text-green-800">
             <li>1. Upload images to the Media Library</li>
             <li>2. Edit content slots to use your custom images</li>
             <li>3. Preview your changes before publishing</li>

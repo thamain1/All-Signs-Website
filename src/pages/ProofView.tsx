@@ -87,7 +87,7 @@ export function ProofView() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+        <Loader2 className="w-8 h-8 animate-spin text-green-600" />
       </div>
     );
   }
@@ -159,7 +159,7 @@ export function ProofView() {
                           <AlertCircle className="w-5 h-5 text-orange-600 flex-shrink-0 mt-1" />
                         )}
                         {comment.status === 'comment' && (
-                          <MessageCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-1" />
+                          <MessageCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-1" />
                         )}
                         <div className="flex-1">
                           <div className="flex items-center justify-between mb-1">
@@ -187,7 +187,7 @@ export function ProofView() {
                     type="text"
                     value={authorName}
                     onChange={(e) => setAuthorName(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:border-transparent"
                     placeholder="Enter your name"
                   />
                 </div>
@@ -202,7 +202,7 @@ export function ProofView() {
                       onClick={() => setCommentStatus('comment')}
                       className={`flex-1 px-4 py-2 rounded-lg border-2 ${
                         commentStatus === 'comment'
-                          ? 'border-blue-600 bg-blue-50 text-blue-700'
+                          ? 'border-green-600 bg-green-50 text-green-700'
                           : 'border-gray-300 text-gray-700'
                       }`}
                     >
@@ -241,7 +241,7 @@ export function ProofView() {
                     value={newComment}
                     onChange={(e) => setNewComment(e.target.value)}
                     rows={4}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:border-transparent"
                     placeholder="Share your thoughts on this design..."
                     required
                   ></textarea>
@@ -249,7 +249,7 @@ export function ProofView() {
 
                 <button
                   type="submit"
-                  className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700"
+                  className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700"
                 >
                   Submit Feedback
                 </button>

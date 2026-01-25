@@ -147,7 +147,7 @@ export default function ContentSlots() {
 
                   <button
                     onClick={() => handleRollback(version.id)}
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                   >
                     <RefreshCw className="w-4 h-4" />
                     Rollback
@@ -175,7 +175,7 @@ export default function ContentSlots() {
                     key={slot.id}
                     onClick={() => setSelectedSlot(slot)}
                     className={`bg-white rounded-lg shadow-sm p-6 cursor-pointer transition-all hover:shadow-md ${
-                      selectedSlot?.id === slot.id ? 'ring-2 ring-blue-500' : ''
+                      selectedSlot?.id === slot.id ? 'ring-2 ring-green-500' : ''
                     }`}
                   >
                     <div className="flex items-start gap-4">
@@ -233,7 +233,7 @@ export default function ContentSlots() {
                           </span>
 
                           {draftValue.imageAssetId ? (
-                            <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded">
+                            <span className="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded">
                               Custom Upload
                             </span>
                           ) : (
@@ -278,7 +278,7 @@ export default function ContentSlots() {
                         <p className="text-sm text-yellow-800 mb-2">No uploaded images available</p>
                         <a
                           href="/admin/media"
-                          className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                          className="text-sm text-green-600 hover:text-green-700 font-medium"
                         >
                           Go to Media Library to upload images →
                         </a>
@@ -292,7 +292,7 @@ export default function ContentSlots() {
                           })}
                           className={`border-2 rounded-lg p-3 cursor-pointer transition-all ${
                             !selectedSlot.draft_value.imageAssetId
-                              ? 'border-blue-500 bg-blue-50'
+                              ? 'border-green-500 bg-green-50'
                               : 'border-gray-200 hover:border-gray-300'
                           }`}
                         >
@@ -309,7 +309,7 @@ export default function ContentSlots() {
                               <p className="text-xs text-gray-500">{selectedSlot.draft_value.fallbackPath}</p>
                             </div>
                             {!selectedSlot.draft_value.imageAssetId && (
-                              <div className="w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+                              <div className="w-5 h-5 bg-green-600 rounded-full flex items-center justify-center flex-shrink-0">
                                 <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                                 </svg>
@@ -327,7 +327,7 @@ export default function ContentSlots() {
                             })}
                             className={`border-2 rounded-lg p-3 cursor-pointer transition-all ${
                               selectedSlot.draft_value.imageAssetId === asset.id
-                                ? 'border-blue-500 bg-blue-50'
+                                ? 'border-green-500 bg-green-50'
                                 : 'border-gray-200 hover:border-gray-300'
                             }`}
                           >
@@ -346,7 +346,7 @@ export default function ContentSlots() {
                                 </p>
                               </div>
                               {selectedSlot.draft_value.imageAssetId === asset.id && (
-                                <div className="w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+                                <div className="w-5 h-5 bg-green-600 rounded-full flex items-center justify-center flex-shrink-0">
                                   <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                                   </svg>
@@ -367,7 +367,7 @@ export default function ContentSlots() {
                       value={selectedSlot.draft_value.alt}
                       onChange={(e) => handleUpdateSlot(selectedSlot.slot_key, { alt: e.target.value })}
                       rows={2}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                     />
                   </div>
 
@@ -379,7 +379,7 @@ export default function ContentSlots() {
                       type="text"
                       value={selectedSlot.draft_value.headline || ''}
                       onChange={(e) => handleUpdateSlot(selectedSlot.slot_key, { headline: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                     />
                   </div>
 
@@ -391,7 +391,7 @@ export default function ContentSlots() {
                       value={selectedSlot.draft_value.subhead || ''}
                       onChange={(e) => handleUpdateSlot(selectedSlot.slot_key, { subhead: e.target.value })}
                       rows={2}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                     />
                   </div>
 
@@ -401,7 +401,7 @@ export default function ContentSlots() {
                         type="checkbox"
                         checked={selectedSlot.draft_value.enabled}
                         onChange={(e) => handleUpdateSlot(selectedSlot.slot_key, { enabled: e.target.checked })}
-                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
                       />
                       <span className="text-sm font-medium text-gray-700">Enabled</span>
                     </label>

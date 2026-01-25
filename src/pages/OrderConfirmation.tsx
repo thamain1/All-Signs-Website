@@ -27,7 +27,7 @@ export function OrderConfirmation() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+        <Loader2 className="w-8 h-8 animate-spin text-green-600" />
       </div>
     );
   }
@@ -36,7 +36,7 @@ export function OrderConfirmation() {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
         <h1 className="text-3xl font-bold text-gray-900 mb-4">Order Not Found</h1>
-        <Link to="/" className="text-blue-600 hover:underline">Return to Home</Link>
+        <Link to="/" className="text-green-600 hover:underline">Return to Home</Link>
       </div>
     );
   }
@@ -51,7 +51,7 @@ export function OrderConfirmation() {
             Thank you for your order. We'll send you an email confirmation shortly.
           </p>
 
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-8">
+          <div className="bg-green-50 border border-green-200 rounded-xl p-6 mb-8">
             <div className="grid md:grid-cols-2 gap-4 text-left">
               <div>
                 <div className="text-sm text-gray-600 mb-1">Order Number</div>
@@ -59,7 +59,7 @@ export function OrderConfirmation() {
               </div>
               <div>
                 <div className="text-sm text-gray-600 mb-1">Total Amount</div>
-                <div className="font-bold text-lg text-blue-600">${order.total_amount.toFixed(2)}</div>
+                <div className="font-bold text-lg text-green-600">${order.total_amount.toFixed(2)}</div>
               </div>
               <div>
                 <div className="text-sm text-gray-600 mb-1">Estimated Production Complete</div>
@@ -76,7 +76,7 @@ export function OrderConfirmation() {
             <h2 className="text-xl font-bold text-gray-900 mb-4">What's Next?</h2>
             <div className="text-left space-y-3">
               <div className="flex items-start gap-3">
-                <div className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center flex-shrink-0 text-sm font-semibold">1</div>
+                <div className="w-6 h-6 rounded-full bg-green-600 text-white flex items-center justify-center flex-shrink-0 text-sm font-semibold">1</div>
                 <div>
                   <div className="font-semibold">Upload Your Artwork</div>
                   <div className="text-sm text-gray-600">
@@ -85,7 +85,7 @@ export function OrderConfirmation() {
                 </div>
               </div>
               <div className="flex items-start gap-3">
-                <div className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center flex-shrink-0 text-sm font-semibold">2</div>
+                <div className="w-6 h-6 rounded-full bg-green-600 text-white flex items-center justify-center flex-shrink-0 text-sm font-semibold">2</div>
                 <div>
                   <div className="font-semibold">Design Review</div>
                   <div className="text-sm text-gray-600">
@@ -94,7 +94,7 @@ export function OrderConfirmation() {
                 </div>
               </div>
               <div className="flex items-start gap-3">
-                <div className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center flex-shrink-0 text-sm font-semibold">3</div>
+                <div className="w-6 h-6 rounded-full bg-green-600 text-white flex items-center justify-center flex-shrink-0 text-sm font-semibold">3</div>
                 <div>
                   <div className="font-semibold">Production & Shipping</div>
                   <div className="text-sm text-gray-600">
@@ -108,7 +108,7 @@ export function OrderConfirmation() {
           <div className="mt-8 flex flex-wrap gap-4 justify-center">
             <Link
               to="/account/orders"
-              className="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition"
+              className="bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition"
             >
               View Order Details
             </Link>
