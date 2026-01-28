@@ -1,7 +1,10 @@
 import { Link } from 'react-router-dom';
 import { Mail, Phone, MapPin, Facebook, Twitter, Instagram, Linkedin } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
 
 export function Footer() {
+  const { user } = useAuth();
+
   return (
     <footer className="bg-gray-900 text-gray-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -48,13 +51,15 @@ export function Footer() {
           <div>
             <h4 className="text-white font-semibold mb-4">Contact</h4>
             <ul className="space-y-3 text-sm">
-              <li className="flex items-start gap-2">
-                <Phone className="w-5 h-5 flex-shrink-0 mt-0.5" />
-                <div>
-                  <div>1-800-ALL-SIGN</div>
-                  <div className="text-xs text-gray-400">Mon-Fri 8AM-6PM EST</div>
-                </div>
-              </li>
+              {user && (
+                <li className="flex items-start gap-2">
+                  <Phone className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <div>1-800-ALL-SIGN</div>
+                    <div className="text-xs text-gray-400">Mon-Fri 8AM-6PM EST</div>
+                  </div>
+                </li>
+              )}
               <li className="flex items-start gap-2">
                 <Mail className="w-5 h-5 flex-shrink-0 mt-0.5" />
                 <a href="mailto:support@allsignsnc.com" className="hover:text-white transition">

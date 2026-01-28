@@ -1,6 +1,9 @@
 import { Mail, Phone, MapPin, Clock } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 export function Contact() {
+  const { user } = useAuth();
+
   return (
     <div className="bg-gray-50 min-h-screen py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -13,14 +16,16 @@ export function Contact() {
           <div className="bg-white rounded-xl p-8 shadow-sm">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">Get In Touch</h2>
             <div className="space-y-6">
-              <div className="flex items-start gap-4">
-                <Phone className="w-6 h-6 text-green-600 flex-shrink-0 mt-1" />
-                <div>
-                  <h3 className="font-semibold text-gray-900 mb-1">Phone</h3>
-                  <p className="text-gray-600">1-800-ALL-SIGN</p>
-                  <p className="text-sm text-gray-500">Mon-Fri 8AM-6PM EST</p>
+              {user && (
+                <div className="flex items-start gap-4">
+                  <Phone className="w-6 h-6 text-green-600 flex-shrink-0 mt-1" />
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-1">Phone</h3>
+                    <p className="text-gray-600">1-800-ALL-SIGN</p>
+                    <p className="text-sm text-gray-500">Mon-Fri 8AM-6PM EST</p>
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div className="flex items-start gap-4">
                 <Mail className="w-6 h-6 text-green-600 flex-shrink-0 mt-1" />
