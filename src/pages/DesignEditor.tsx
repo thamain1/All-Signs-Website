@@ -34,6 +34,7 @@ import {
   Eye, EyeOff, Lock, Unlock,
   FlipHorizontal, FlipVertical,
   Layers, Share2, Plus, Minus, Maximize2, X,
+  MessageCircle, ThumbsUp, AlertCircle,
 } from 'lucide-react';
 import SizeSelector from '../components/SizeSelector';
 
@@ -192,6 +193,10 @@ export function DesignEditor() {
   const [proofUrl, setProofUrl] = useState('');
   const [showProofModal, setShowProofModal] = useState(false);
   const [proofLoading, setProofLoading] = useState(false);
+  const [proofCopied, setProofCopied] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [feedbackProofs, setFeedbackProofs] = useState<Array<{ proof: any; comments: any[] }>>([]);
+  const [feedbackLoading, setFeedbackLoading] = useState(false);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [showProductPicker, setShowProductPicker] = useState(false);
   const [productPickerPending, setProductPickerPending] = useState(false); // true if picker should chain into add-to-cart
@@ -879,11 +884,68 @@ export function DesignEditor() {
     }
   };
 
-  const copyProofUrl = async () => {
+  const copyToClipboard = async (text: string): Promise<boolean> => {
+    // Try Clipboard API first
     try {
-      await navigator.clipboard.writeText(proofUrl);
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
     } catch {
-      // ignore
+      // fall through to textarea fallback
+    }
+    // Fallback for older browsers / unfocused contexts
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      return ok;
+    } catch {
+      return false;
+    }
+  };
+
+  const copyProofUrl = async () => {
+    const ok = await copyToClipboard(proofUrl);
+    if (ok) {
+      setProofCopied(true);
+      setTimeout(() => setProofCopied(false), 2000);
+    } else {
+      alert('Could not copy automatically — please select the URL and copy manually (Ctrl+C).');
+    }
+  };
+
+  const loadFeedback = async () => {
+    if (!designRef.current) return;
+    setFeedbackLoading(true);
+    setShowFeedback(true);
+    try {
+      const { data: proofs } = await supabase
+        .from('proof_links')
+        .select('*')
+        .eq('design_id', designRef.current.id)
+        .order('created_at', { ascending: false });
+      if (!proofs || proofs.length === 0) { setFeedbackProofs([]); return; }
+      const ids = proofs.map((p: any) => p.id);
+      const { data: comments } = await supabase
+        .from('proof_comments')
+        .select('*')
+        .in('proof_link_id', ids)
+        .eq('is_internal', false)
+        .order('created_at', { ascending: false });
+      const byProof = (comments || []).reduce((acc: Record<string, any[]>, c: any) => {
+        (acc[c.proof_link_id] = acc[c.proof_link_id] || []).push(c);
+        return acc;
+      }, {});
+      setFeedbackProofs(proofs.map((p: any) => ({ proof: p, comments: byProof[p.id] || [] })));
+    } finally {
+      setFeedbackLoading(false);
     }
   };
 
@@ -1053,6 +1115,15 @@ export function DesignEditor() {
           >
             {proofLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Share2 className="w-4 h-4" />}
             Share Proof
+          </button>
+
+          <button
+            onClick={loadFeedback}
+            title="View customer feedback on shared proofs"
+            className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm transition-colors"
+          >
+            <MessageCircle className="w-4 h-4" />
+            Feedback
           </button>
 
           <div className="relative">
@@ -1670,15 +1741,108 @@ export function DesignEditor() {
               />
               <button
                 onClick={copyProofUrl}
-                className="flex items-center gap-1.5 px-3 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-sm transition-colors"
+                className={`flex items-center gap-1.5 px-3 py-2 rounded text-sm transition-colors text-white ${proofCopied ? 'bg-green-700' : 'bg-green-600 hover:bg-green-700'}`}
               >
-                <CopyIcon className="w-4 h-4" />
-                Copy
+                {proofCopied ? <Check className="w-4 h-4" /> : <CopyIcon className="w-4 h-4" />}
+                {proofCopied ? 'Copied!' : 'Copy'}
               </button>
             </div>
             <p className="text-xs text-gray-400">
               Proof saves the current design state. To send an updated version, generate a new link after making changes.
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* ── Customer feedback modal ── */}
+      {showFeedback && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 max-w-2xl w-full max-h-[85vh] overflow-y-auto shadow-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">Customer Feedback</h2>
+                <p className="text-sm text-gray-500 mt-1">All proofs sent for this design and their reviews.</p>
+              </div>
+              <button onClick={() => setShowFeedback(false)} className="text-gray-400 hover:text-gray-700">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {feedbackLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-6 h-6 animate-spin text-green-600" />
+              </div>
+            ) : feedbackProofs.length === 0 ? (
+              <div className="text-center py-12 text-sm text-gray-500">
+                <Share2 className="w-8 h-8 text-gray-300 mx-auto mb-3" />
+                No proofs shared yet. Click <strong>Share Proof</strong> to send a review link to a customer.
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {feedbackProofs.map(({ proof, comments }) => {
+                  const proofLinkUrl = `${window.location.origin}/proof/${proof.token}`;
+                  return (
+                    <div key={proof.id} className="border border-gray-200 rounded-lg overflow-hidden">
+                      <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-semibold text-gray-900 truncate">
+                              Sent {new Date(proof.created_at).toLocaleDateString()}
+                            </p>
+                            <p className="text-xs text-gray-500 mt-0.5">
+                              {proof.view_count} {proof.view_count === 1 ? 'view' : 'views'}
+                              {proof.last_viewed_at && ` · last viewed ${new Date(proof.last_viewed_at).toLocaleDateString()}`}
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => copyToClipboard(proofLinkUrl)}
+                            title="Copy proof URL"
+                            className="flex items-center gap-1 px-2 py-1 text-xs border border-gray-300 bg-white rounded hover:bg-gray-50 flex-shrink-0"
+                          >
+                            <CopyIcon className="w-3 h-3" /> Link
+                          </button>
+                        </div>
+                      </div>
+                      <div className="p-3">
+                        {comments.length === 0 ? (
+                          <p className="text-xs text-gray-400 italic py-2 text-center">No comments yet</p>
+                        ) : (
+                          <ul className="space-y-3">
+                            {comments.map((c: any) => (
+                              <li key={c.id} className="flex gap-2">
+                                <div className="flex-shrink-0 mt-0.5">
+                                  {c.status === 'approved' && <ThumbsUp className="w-4 h-4 text-green-600" />}
+                                  {c.status === 'change_requested' && <AlertCircle className="w-4 h-4 text-orange-500" />}
+                                  {c.status === 'comment' && <MessageCircle className="w-4 h-4 text-blue-500" />}
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center gap-2 mb-0.5">
+                                    <span className="text-xs font-semibold text-gray-900">
+                                      {c.author_name || 'Anonymous'}
+                                    </span>
+                                    <span className={`text-[10px] uppercase font-semibold tracking-wide rounded px-1.5 py-0.5 ${
+                                      c.status === 'approved' ? 'bg-green-100 text-green-700' :
+                                      c.status === 'change_requested' ? 'bg-orange-100 text-orange-700' :
+                                      'bg-blue-100 text-blue-700'
+                                    }`}>
+                                      {c.status === 'change_requested' ? 'changes' : c.status}
+                                    </span>
+                                    <span className="text-[10px] text-gray-400">
+                                      {new Date(c.created_at).toLocaleString()}
+                                    </span>
+                                  </div>
+                                  <p className="text-sm text-gray-700 whitespace-pre-wrap break-words">{c.comment}</p>
+                                </div>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       )}
