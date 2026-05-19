@@ -589,9 +589,9 @@ interface Product { id, category_id, name, slug, description, short_description,
 interface ProductOption { id, product_id, option_type, name, value, description, price_modifier, is_default, display_order }
 interface PricingRule { id, product_id, material_option_id, base_price, price_per_sqft, min_quantity, max_quantity, discount_percent }
 interface Cart { id, user_id, session_id, promo_code, discount_amount }
-interface CartItem { id, cart_id, product_id, design_id, quantity, width, height, selected_options, unit_price, total_price, production_speed, product? }
+interface CartItem { id, cart_id, product_id, quantity, width, height, selected_options, unit_price, total_price, production_speed, product? }
 interface Order { id, order_number, user_id, status, subtotal, discount_amount, shipping_cost, tax_amount, total_amount, promo_code, shipping_address, billing_address, shipping_method, estimated_production_date, estimated_delivery_date, tracking_number, notes }
-interface OrderItem { id, order_id, product_id, design_id, product_name, quantity, width, height, selected_options, unit_price, total_price }
+interface OrderItem { id, order_id, product_id, product_name, quantity, width, height, selected_options, unit_price, total_price, production_speed }
 interface Address { id, user_id, address_type, full_name, company, address_line1, address_line2, city, state, zip_code, country, phone, is_default }
 interface PromoCode { id, code, description, discount_type, discount_value, min_order_amount, max_uses, current_uses, valid_from, valid_until, is_active }
 ```
@@ -602,7 +602,12 @@ interface Design { id, user_id, name, product_id, template_id, product_type, var
 interface Template { id, name, slug, category_id, product_type, tags, thumbnail_url, base_width_in, base_height_in, bleed_in, safe_zone_in, editor_json, description, is_published, usage_count }
 interface TemplateCategory { id, name, slug, description, display_order }
 interface DesignAsset { id, design_id, user_id, file_name, file_type, file_size, file_url, width_px, height_px, thumbnail_url }
-interface PreflightCheck { id, label, status, message, severity }
+interface PreflightCheck {
+  checks: Array<{ type: string; status: 'pass' | 'warn' | 'fail'; message: string; details?: any }>;
+  warnings: string[];
+  blockers: string[];
+  passed: boolean;
+}
 ```
 
 **Proofing:**
@@ -642,27 +647,26 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 ### `src/lib/adminUtils.ts`
 
 ```ts
-getUserProfile(userId?: string): Promise<{ user_id, role } | null>
+getUserProfile(userId?: string): Promise<UserProfile | null>
 isAdmin(): Promise<boolean>
-ensureProfile(): Promise<void>   // creates profile row if missing
-setUserRole(userId: string, role: 'user' | 'admin'): Promise<void>
+ensureProfile(): Promise<UserProfile | null>   // inserts profile row if missing, returns it
+setUserRole(userId: string, role: 'user' | 'admin'): Promise<boolean>  // returns false if caller is not admin
 ```
 
 - `getUserProfile` — queries `profiles` table, defaults to current user if no `userId` passed
 - `isAdmin` — calls `getUserProfile`, checks `role === 'admin'`
-- `ensureProfile` — upserts a `profiles` row with `role: 'user'` for the current user
-- `setUserRole` — admin-only helper to update another user's role
+- `ensureProfile` — inserts a `profiles` row with `role: 'user'` if one does not exist; returns the profile (or null on error)
+- `setUserRole` — admin-only; checks caller is admin first, returns `false` if not
 
 ### `src/lib/sizePresets.ts`
 
-Hardcoded size presets for 14 product categories. Each category object contains an array of preset sizes with `label`, `width`, `height`, and `guidanceText`.
+Hardcoded size presets for 13 product categories. Each category object (`CategorySizePresets`) contains an array of `SizePreset` objects with `name`, `width`, `height`, `unit`, `isDefault`, `displayOrder`, and `guidanceText`.
 
 Supported categories (by slug key):
-`yard-signs`, `banners`, `posters`, `flyers`, `business-cards`, `decals-stickers`, `vehicle-graphics`, `rigid-signs`, `flags`, `trade-show`, `window-graphics`, `floor-graphics`, `labels`, `postcards`
+`yard-signs`, `yard-sign-riders`, `banners`, `event-backdrops`, `posters`, `foam-boards`, `rigid-signs`, `car-magnets`, `decals-rectangle`, `decals-diecut`, `aframe-inserts`, `feather-flags`, `teardrop-flags`
 
 ```ts
-getSizePresetsForCategory(categorySlug: string): SizePreset[]
-formatDimensions(width: number, height: number): string  // "24" × 18""
+getSizePresetsForCategory(categorySlug: string): CategorySizePresets | undefined
 ```
 
 **Legibility rule built in:** 1 inch of letter height per 10 feet of viewing distance. Used in `SizeSelector` component to calculate readable font sizes.
@@ -672,57 +676,70 @@ formatDimensions(width: number, height: number): string  // "24" × 18""
 All Fabric.js canvas operations:
 
 ```ts
-createDefaultCanvas(canvasEl: HTMLCanvasElement, widthIn: number, heightIn: number, bleedIn?: number, safeZoneIn?: number): fabric.Canvas
-exportCanvasToImage(canvas: fabric.Canvas): Promise<Blob>
-exportCanvasToPDF(canvas: fabric.Canvas, widthIn: number, heightIn: number): Promise<Blob>
-runPreflightChecks(canvas: fabric.Canvas, widthIn: number, heightIn: number): PreflightCheck[]
+// Returns a plain Fabric.js JSON state object (not a live Canvas instance)
+createDefaultCanvas(dimensions: CanvasDimensions): object
+
+// Returns a base64 data URL string (not a Blob)
+exportCanvasToImage(canvas: Canvas, multiplier?: number): Promise<string>
+
+// Returns a PDF Blob
+exportCanvasToPDF(canvas: Canvas, dimensions: CanvasDimensions): Promise<Blob>
+
+// Returns a single PreflightCheck result object (not an array)
+runPreflightChecks(canvas: Canvas, dimensions: CanvasDimensions): PreflightCheck
+
 inchesToPixels(inches: number, dpi?: number): number   // default 150 DPI
 pixelsToInches(pixels: number, dpi?: number): number
-generateProofToken(): string   // crypto.randomUUID() based
+
+// Uses crypto.getRandomValues (32 hex chars), not crypto.randomUUID
+generateProofToken(): string
 ```
 
-**Canvas setup:**
-- Displays a bleed zone (red dashed outline, 0.125" default)
-- Displays a safe zone (green dashed outline, 0.25" default)
-- Grid/ruler marks at 1" intervals
+`CanvasDimensions` shape: `{ widthIn, heightIn, bleedIn, safeZoneIn }`
 
 **Preflight checks:**
-1. DPI — warns if effective resolution < 100 DPI, blocks if < 72 DPI
-2. Safe zone — warns if any object extends outside safe zone boundary
-3. Background — warns if canvas has transparent/white background (suggests full-bleed fill)
+1. DPI — warns if effective resolution < 150 DPI, blocks if < 100 DPI
+2. Safe zone — warns if any text object extends outside safe zone boundary
+3. Background — warns if no full-bleed background object detected
 
 **Export:**
-- PNG preview at 150 DPI using `canvas.toDataURL`
-- Print PDF at 300 DPI using `pdf-lib`, embedded as JPEG page at exact inch dimensions
+- PNG preview at 150 DPI (×2 multiplier for sharpness) using `canvas.toDataURL`
+- Print PDF at 300 DPI (×2 multiplier) using `pdf-lib`, PNG embedded at exact inch dimensions (72pt/in) including bleed
 
 ### `src/lib/contentResolver.ts`
 
-Client-side CMS resolver with in-memory cache:
+Client-side CMS resolver exported as a singleton class instance (`contentResolver`):
 
 ```ts
-getContentSlot(slotKey: string, previewMode?: boolean): Promise<ContentSlotValue>
-getAllSlots(previewMode?: boolean): Promise<Record<string, ContentSlotValue>>
-setPreviewMode(enabled: boolean): void
-invalidateCache(): void
+// Singleton — import and call directly:
+import { contentResolver } from '../lib/contentResolver';
+
+contentResolver.getContentSlot(slotKey: string): Promise<ContentSlotValue | null>
+contentResolver.getAllSlots(): Promise<Record<string, ContentSlotValue>>
+contentResolver.setPreviewMode(enabled: boolean): void   // clears cache on toggle
+contentResolver.clearCache(): void
+contentResolver.isPreviewMode(): boolean
+contentResolver.getImageUrl(slotValue: ContentSlotValue | null): string  // returns url || fallbackPath
 ```
 
 **ContentSlotValue shape:**
 ```ts
 {
-  fallbackPath?: string;   // local path like /images/stock/hero.webp
-  assetId?: string;        // media_assets.id reference
-  url?: string;            // resolved at runtime from assetId
-  alt?: string;
+  fallbackPath: string;        // local path like /images/stock/hero.webp
+  imageAssetId?: string;       // media_assets.id reference (NOT "assetId")
+  url?: string;                // resolved at runtime from imageAssetId
+  alt: string;
   headline?: string;
   subhead?: string;
-  enabled?: boolean;
+  enabled: boolean;
 }
 ```
 
 - When `previewMode = false` (default), reads `published_value`
 - When `previewMode = true`, reads `draft_value`
-- Cache is invalidated when preview mode changes
-- If `assetId` is present, lazily resolves the URL from `media_assets`
+- Cache is keyed per `slotKey-draft/published` and cleared when preview mode changes
+- If `imageAssetId` is present, lazily resolves the URL from `media_assets`
+- Returns `null` if slot not found or `enabled = false`
 
 ### `src/lib/contentSlots.ts`
 
@@ -768,29 +785,31 @@ const AuthContext = createContext<AuthContextValue>(...);
 export function AuthProvider({ children }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [profile, setProfile] = useState<{ role: string } | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       if (session?.user) loadProfile(session.user.id);
-      setLoading(false);
+      else setLoading(false);
     });
 
-    supabase.auth.onAuthStateChange((event, session) => {
+    supabase.auth.onAuthStateChange((_event, session) => {
       (async () => {
         setUser(session?.user ?? null);
         if (session?.user) {
-          await ensureProfile();
           await loadProfile(session.user.id);
         } else {
           setProfile(null);
+          setIsAdmin(false);
         }
       })();
     });
   }, []);
 
-  const isAdmin = profile?.role === 'admin';
+  // isAdmin is derived from profile.role inside loadProfile, not computed inline
+  // ensureProfile() is NOT called here — it is called by AdminGuard on admin route entry
   // signUp: supabase.auth.signUp
   // signIn: supabase.auth.signInWithPassword
   // signOut: supabase.auth.signOut
@@ -844,15 +863,27 @@ Items are loaded with product join: `.select('*, product:products(*)')`.
 
 ### `src/components/AdminGuard.tsx`
 
-Wraps any route that requires admin access.
+Wraps any route that requires admin access. Uses `export default`.
 
 ```tsx
-export function AdminGuard({ children }) {
-  const { user, loading, isAdmin } = useAuth();
+export default function AdminGuard({ children }) {
+  const { user } = useAuth();
+  const [checking, setChecking] = useState(true);
+  const [isUserAdmin, setIsUserAdmin] = useState(false);
 
-  if (loading) return <LoadingSpinner />;
-  if (!user) return <Navigate to="/login" />;
-  if (!isAdmin) return <AccessDeniedPage />;
+  useEffect(() => {
+    if (!user) { setChecking(false); return; }
+    (async () => {
+      await ensureProfile();           // creates profile row if missing
+      const adminStatus = await isAdmin();
+      setIsUserAdmin(adminStatus);
+      setChecking(false);
+    })();
+  }, [user]);
+
+  if (checking) return <LoadingSpinner message="Checking permissions..." />;
+  if (!user) return <Navigate to="/login" replace />;
+  if (!isUserAdmin) return <AccessDeniedPage />;   // inline JSX with "Return to Home" link
 
   return <>{children}</>;
 }
@@ -948,7 +979,7 @@ Route: `/products/:slug`
 
 ### `src/pages/ProductDetail.tsx`
 
-Route: `/products/:categorySlug/:productSlug`
+Route: `/product/:slug`
 
 - Fetches product + options + pricing rules
 - Image gallery with thumbnail navigation
@@ -959,7 +990,7 @@ Route: `/products/:categorySlug/:productSlug`
 - Real-time price calculation based on size × sqft rate + base price + option modifiers
 - Production date estimate shown
 - "Add to Cart" button — creates/updates cart item in Supabase
-- "Design Online" button — navigates to `/design-editor?product=<id>`
+- "Design Online" button — creates a design record and navigates to `/designs/:designId/edit`
 
 ### `src/pages/Cart.tsx`
 
@@ -977,12 +1008,12 @@ Route: `/checkout`
 
 Form sections:
 1. **Shipping Address** — full name, company, address line 1/2, city, state, zip, country, phone
-2. **Shipping Method** — Standard (free, 5-7 days), Expedited ($15, 2-3 days), Overnight ($35, 1 day)
+2. **Shipping Method** — Ground ($9.99, +5 days), Express ($24.99, +2 days), Overnight ($49.99, +1 day)
 3. **Payment** — placeholder section (no real payment integration, just form UI)
 4. **Order Summary sidebar** — itemized list from cart
 
 On submit:
-- Generates order number: `ASN-<timestamp>`
+- Generates order number: `ORD-<timestamp>`
 - Calculates estimated dates based on production days + shipping method
 - Inserts `orders` row
 - Inserts `order_items` rows from cart items
@@ -1022,7 +1053,7 @@ Route: `/templates`
 - Category filter tabs
 - Template grid cards with thumbnail, name, product type badge, "Use Template" CTA
 - "Start from Blank" card at top
-- Navigates to `/design-editor?template=<id>` or `/design-editor?product=<productId>`
+- Navigates to `/designs/:designId/edit` after creating a design record from the selected template or product
 
 ### `src/pages/ProofView.tsx`
 
@@ -1037,9 +1068,9 @@ Route: `/proof/:token`
 
 ### `src/pages/DesignEditor.tsx`
 
-Route: `/design-editor`
+Route: `/designs/:designId/edit`
 
-Query params: `?product=<productId>` or `?template=<templateId>` or `?design=<designId>`
+The `designId` is a path parameter (not a query string). A design record must be created before navigating here.
 
 **Left panel:**
 - Tools: Select, Add Text, Add Image, Add Rectangle
@@ -1228,41 +1259,64 @@ Layout: slot list (left) + edit panel (right).
 
 File: `src/App.tsx`
 
+Provider nesting order: `AuthProvider > CartProvider > BrowserRouter`. `<Layout>` wraps all routes once at the top level (not individually per route).
+
 ```tsx
-<BrowserRouter>
-  <AuthProvider>
-    <CartProvider>
-      <Routes>
-        {/* Public */}
-        <Route path="/" element={<Layout><Home /></Layout>} />
-        <Route path="/login" element={<Layout><Login /></Layout>} />
-        <Route path="/signup" element={<Layout><Signup /></Layout>} />
-        <Route path="/products/:slug" element={<Layout><ProductCategory /></Layout>} />
-        <Route path="/products/:categorySlug/:productSlug" element={<Layout><ProductDetail /></Layout>} />
-        <Route path="/cart" element={<Layout><Cart /></Layout>} />
-        <Route path="/checkout" element={<Layout><Checkout /></Layout>} />
-        <Route path="/order-confirmation/:orderId" element={<Layout><OrderConfirmation /></Layout>} />
-        <Route path="/contact" element={<Layout><Contact /></Layout>} />
-        <Route path="/custom-quote" element={<Layout><CustomQuote /></Layout>} />
-        <Route path="/resources" element={<Layout><Resources /></Layout>} />
-        <Route path="/templates" element={<Layout><TemplateLibrary /></Layout>} />
-        <Route path="/design-editor" element={<Layout><DesignEditor /></Layout>} />
-        <Route path="/proof/:token" element={<Layout><ProofView /></Layout>} />
+<AuthProvider>
+  <CartProvider>
+    <BrowserRouter>
+      <Layout>
+        <Routes>
+          {/* Public */}
+          <Route path="/" element={<Home />} />
+          <Route path="/products/:slug" element={<ProductCategory />} />
+          <Route path="/product/:slug" element={<ProductDetail />} />
+          <Route path="/cart" element={<Cart />} />
+          <Route path="/checkout" element={<Checkout />} />
+          <Route path="/order-confirmation/:orderId" element={<OrderConfirmation />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
+          <Route path="/contact" element={<Contact />} />
+          <Route path="/custom-quote" element={<CustomQuote />} />
+          <Route path="/resources" element={<Resources />} />
+          <Route path="/templates" element={<TemplateLibrary />} />
+          <Route path="/designs/:designId/edit" element={<DesignEditor />} />
+          <Route path="/proof/:token" element={<ProofView />} />
 
-        {/* Account (auth required) */}
-        <Route path="/account" element={<Layout><Account /></Layout>} />
-        <Route path="/account/designs" element={<Layout><AccountDesigns /></Layout>} />
+          {/* Account */}
+          <Route path="/account" element={<Account />} />
+          <Route path="/account/orders" element={<Account />} />
+          <Route path="/account/addresses" element={<Account />} />
+          <Route path="/account/profile" element={<Account />} />
+          <Route path="/account/designs" element={<AccountDesigns />} />
 
-        {/* Admin (admin role required) */}
-        <Route path="/admin" element={<AdminGuard><Layout><Dashboard /></Layout></AdminGuard>} />
-        <Route path="/admin/products" element={<AdminGuard><Layout><Products /></Layout></AdminGuard>} />
-        <Route path="/admin/media" element={<AdminGuard><Layout><MediaLibrary /></Layout></AdminGuard>} />
-        <Route path="/admin/content" element={<AdminGuard><Layout><ContentSlots /></Layout></AdminGuard>} />
-      </Routes>
-    </CartProvider>
-  </AuthProvider>
-</BrowserRouter>
+          {/* Admin (wrapped in AdminGuard) */}
+          <Route path="/admin" element={<AdminGuard><AdminDashboard /></AdminGuard>} />
+          <Route path="/admin/media" element={<AdminGuard><MediaLibrary /></AdminGuard>} />
+          <Route path="/admin/content" element={<AdminGuard><ContentSlots /></AdminGuard>} />
+          <Route path="/admin/products" element={<AdminGuard><ProductsAdmin /></AdminGuard>} />
+
+          {/* Footer alias routes (stub — redirect to nearest real page) */}
+          <Route path="/deals" element={<Home />} />
+          <Route path="/track" element={<Home />} />
+          <Route path="/shipping" element={<Resources />} />
+          <Route path="/returns" element={<Resources />} />
+          <Route path="/guarantee" element={<Resources />} />
+          <Route path="/file-setup" element={<Resources />} />
+          <Route path="/materials" element={<Resources />} />
+          <Route path="/design-tips" element={<Resources />} />
+          <Route path="/installation" element={<Resources />} />
+          <Route path="/about" element={<Contact />} />
+          <Route path="/privacy" element={<Resources />} />
+          <Route path="/terms" element={<Resources />} />
+        </Routes>
+      </Layout>
+    </BrowserRouter>
+  </CartProvider>
+</AuthProvider>
 ```
+
+**Note on `ProductDetail` route:** The route is `/product/:slug` (singular, no category prefix). `ProductCategory` uses `/products/:slug`.
 
 ---
 
@@ -1339,11 +1393,14 @@ Quantity tiers: `pricing_rules` rows have `min_quantity` / `max_quantity` ranges
 ### Production Date Calculation
 
 ```
-estimated_production_date = today + production_days_max + speed_factor_days
+estimated_production_date = today + 3 production days
 estimated_delivery_date = estimated_production_date + shipping_method_days
 ```
 
-Shipping method days: Standard +7, Expedited +3, Overnight +1.
+Shipping methods (as stored in `orders.shipping_method`):
+- `ground` → +5 days, $9.99
+- `express` → +2 days, $24.99
+- `overnight` → +1 day, $49.99
 
 ### Design Auto-Save
 
@@ -1354,7 +1411,7 @@ Shipping method days: Standard +7, Expedited +3, Overnight +1.
 ### Cart to Order Conversion
 
 On checkout submit:
-1. Generate `order_number = 'ASN-' + Date.now()`
+1. Generate `order_number = 'ORD-' + Date.now()`
 2. Insert `orders` row with full shipping address JSON
 3. For each `cart_item`, insert `order_items` row snapshotting `product_name`, `selected_options`, `unit_price`, `total_price`
 4. Delete all `cart_items` for the cart
@@ -1457,7 +1514,7 @@ Examples:
 ```json
 {
   "fallbackPath": "/images/stock/hero-print-studio-1600.webp",
-  "assetId": null,
+  "imageAssetId": null,
   "url": null,
   "alt": "Professional printing studio",
   "headline": "Professional Signs & Banners",
@@ -1466,7 +1523,7 @@ Examples:
 }
 ```
 
-When `assetId` is set, `contentResolver` fetches the URL from `media_assets` and populates `url` at runtime.
+When `imageAssetId` is set, `contentResolver` fetches the URL from `media_assets` and populates `url` at runtime.
 
 ### Rollback
 
@@ -1492,17 +1549,14 @@ The design studio is built on Fabric.js v7 and runs entirely in-browser.
 
 ### Canvas Initialization
 
-```ts
-const canvas = new fabric.Canvas(canvasEl, {
-  width: inchesToPixels(widthIn + 2 * bleedIn),
-  height: inchesToPixels(heightIn + 2 * bleedIn),
-  backgroundColor: '#ffffff',
-});
+`createDefaultCanvas(dimensions)` returns a plain Fabric.js JSON state object (not a live Canvas instance). The `DesignEditor` component creates the live `fabric.Canvas` instance itself, then loads the JSON:
 
-// Draw bleed rectangle (red dashed)
-// Draw safe zone rectangle (green dashed)
-// Both are non-selectable, non-evented overlays
+```ts
+const canvas = new Canvas(canvasRef.current, { ... });
+canvas.loadFromJSON(design.editor_json, canvas.renderAll.bind(canvas));
 ```
+
+The JSON produced by `createDefaultCanvas` includes a white background rect sized to `(widthIn + bleedIn×2) × 150 DPI` pixels.
 
 DPI: 150 for editor display. The canvas dimensions are physical inches × 150 DPI.
 
@@ -1546,9 +1600,9 @@ async function exportCanvasToPDF(canvas, widthIn, heightIn) {
 
 | Check | Warning Threshold | Blocker Threshold |
 |---|---|---|
-| Effective DPI | < 150 | < 72 |
-| Object in safe zone | Any object near edge | — |
-| Background fill | White/transparent | — |
+| Effective DPI | < 150 DPI | < 100 DPI |
+| Text in safe zone | Text object near/outside safe zone boundary | — |
+| Background fill | No full-bleed background detected | — |
 
 ---
 
@@ -1589,4 +1643,4 @@ ON CONFLICT (slot_key) DO NOTHING;
 
 ---
 
-*Documentation generated 2026-05-05. Reflects the complete state of the All Signs NC codebase.*
+*Documentation generated 2026-05-05. Last aligned with codebase 2026-05-19.*
