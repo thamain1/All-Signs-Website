@@ -115,6 +115,7 @@ export interface Order {
   tracking_number: string | null;
   tracking_url: string | null;
   notes: string | null;
+  store_id?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -131,6 +132,7 @@ export interface OrderItem {
   unit_price: number;
   total_price: number;
   production_speed: string;
+  store_id?: string | null;
 }
 
 export interface Article {

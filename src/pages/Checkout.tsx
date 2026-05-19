@@ -40,6 +40,9 @@ export function Checkout() {
       const estimatedProductionDate = new Date(Date.now() + productionDays * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
       const estimatedDeliveryDate = new Date(Date.now() + (productionDays + shippingDays) * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
+      // Detect store context from cart items
+      const storeId = items.find(i => i.store_id)?.store_id ?? null;
+
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert({
@@ -54,6 +57,7 @@ export function Checkout() {
           shipping_method: formData.shippingMethod,
           estimated_production_date: estimatedProductionDate,
           estimated_delivery_date: estimatedDeliveryDate,
+          ...(storeId ? { store_id: storeId } : {}),
         })
         .select()
         .single();
@@ -71,6 +75,7 @@ export function Checkout() {
         unit_price: item.unit_price,
         total_price: item.total_price,
         production_speed: item.production_speed,
+        ...(item.store_id ? { store_id: item.store_id } : {}),
       }));
 
       const { error: itemsError } = await supabase

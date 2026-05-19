@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Loader2, Upload, Save, ArrowLeft, Plus, Trash2, Users, Image as ImageIcon } from 'lucide-react';
+import { Loader2, Upload, Save, ArrowLeft, Plus, Trash2, Users, Image as ImageIcon, ShoppingBag } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-import { BusinessStore, StoreProduct, StoreMember, Product } from '../../types';
+import { BusinessStore, StoreProduct, StoreMember, Product, Order } from '../../types';
 
 const LOGO_BUCKET = 'store-logos';
 const MOCKUP_BUCKET = 'store-mockups';
@@ -15,7 +15,9 @@ export default function StoreDetail() {
   const [members, setMembers] = useState<Array<StoreMember & { email?: string }>>([]);
   const [loading, setLoading] = useState(true);
   const [savingStore, setSavingStore] = useState(false);
-  const [tab, setTab] = useState<'settings' | 'products' | 'members'>('settings');
+  const [tab, setTab] = useState<'settings' | 'products' | 'members' | 'orders'>('settings');
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
 
   // Form mirrors of store fields for editing
   const [name, setName] = useState('');
@@ -100,6 +102,18 @@ export default function StoreDetail() {
     }
   };
 
+  const loadOrders = async () => {
+    if (!store) return;
+    setOrdersLoading(true);
+    const { data } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('store_id', store.id)
+      .order('created_at', { ascending: false });
+    setOrders(data || []);
+    setOrdersLoading(false);
+  };
+
   const removeMember = async (memberId: string) => {
     if (!confirm('Remove this member from the store?')) return;
     await supabase.from('store_members').delete().eq('id', memberId);
@@ -166,10 +180,10 @@ export default function StoreDetail() {
         {/* Tabs */}
         <div className="border-b border-gray-200 mb-6">
           <nav className="flex gap-6">
-            {(['settings', 'products', 'members'] as const).map(t => (
+            {(['settings', 'products', 'members', 'orders'] as const).map(t => (
               <button
                 key={t}
-                onClick={() => setTab(t)}
+                onClick={() => { setTab(t); if (t === 'orders' && orders.length === 0) loadOrders(); }}
                 className={`pb-3 text-sm font-medium border-b-2 transition-colors capitalize ${tab === t ? 'border-green-600 text-green-700' : 'border-transparent text-gray-500 hover:text-gray-800'}`}
               >
                 {t} {t === 'products' && `(${storeProducts.length})`} {t === 'members' && `(${members.length})`}
@@ -329,6 +343,57 @@ export default function StoreDetail() {
                         <button onClick={() => removeMember(m.id)} className="p-1.5 rounded hover:bg-gray-100 text-red-500">
                           <Trash2 className="w-4 h-4" />
                         </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        )}
+
+        {/* ── Orders ── */}
+        {tab === 'orders' && (
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            {ordersLoading ? (
+              <div className="flex justify-center py-12">
+                <Loader2 className="w-5 h-5 animate-spin text-green-600" />
+              </div>
+            ) : orders.length === 0 ? (
+              <div className="p-12 text-center">
+                <ShoppingBag className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+                <p className="text-sm text-gray-500">No orders placed through this store yet.</p>
+              </div>
+            ) : (
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr className="text-left text-xs font-semibold uppercase text-gray-500">
+                    <th className="px-4 py-3">Order #</th>
+                    <th className="px-4 py-3">Customer</th>
+                    <th className="px-4 py-3">Date</th>
+                    <th className="px-4 py-3">Total</th>
+                    <th className="px-4 py-3">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {orders.map(o => (
+                    <tr key={o.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 font-semibold text-gray-900">{o.order_number}</td>
+                      <td className="px-4 py-3 font-mono text-xs text-gray-500">{o.user_id.slice(0, 8)}…</td>
+                      <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
+                        {new Date(o.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </td>
+                      <td className="px-4 py-3 font-semibold text-gray-900">${o.total_amount.toFixed(2)}</td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                          o.status === 'delivered' || o.status === 'shipped'
+                            ? 'bg-green-100 text-green-700'
+                            : o.status === 'cancelled'
+                            ? 'bg-red-100 text-red-700'
+                            : 'bg-yellow-100 text-yellow-700'
+                        }`}>
+                          {o.status.replace('_', ' ')}
+                        </span>
                       </td>
                     </tr>
                   ))}

@@ -3,16 +3,18 @@ import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { Order } from '../types';
-import { Package, MapPin, User as UserIcon } from 'lucide-react';
+import { Package, MapPin, User as UserIcon, Store } from 'lucide-react';
 
 export function Account() {
   const { user } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
+  const [storeCount, setStoreCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (user) {
       loadOrders();
+      loadStoreCount();
     }
   }, [user]);
 
@@ -26,6 +28,14 @@ export function Account() {
 
     setOrders(data || []);
     setLoading(false);
+  };
+
+  const loadStoreCount = async () => {
+    const { count } = await supabase
+      .from('store_members')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user?.id);
+    setStoreCount(count || 0);
   };
 
   if (!user) {
@@ -64,6 +74,17 @@ export function Account() {
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Profile</h3>
             <p className="text-gray-600 text-sm">Update your information</p>
           </Link>
+
+          {storeCount > 0 && (
+            <Link
+              to="/account/stores"
+              className="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition"
+            >
+              <Store className="w-10 h-10 text-blue-600 mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Company Stores</h3>
+              <p className="text-gray-600 text-sm">{storeCount} store{storeCount !== 1 ? 's' : ''} — view orders &amp; shop</p>
+            </Link>
+          )}
         </div>
 
         <div className="bg-white rounded-xl p-6 shadow-sm">

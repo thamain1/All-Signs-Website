@@ -29,6 +29,8 @@ import StoreFront from './pages/store/StoreFront';
 import StoreLogin from './pages/store/StoreLogin';
 import StoreJoin from './pages/store/StoreJoin';
 import StoreProductDetail from './pages/store/StoreProductDetail';
+import MyStores from './pages/account/MyStores';
+import MyStoreOrders from './pages/account/MyStoreOrders';
 
 function App() {
   return (
@@ -52,6 +54,8 @@ function App() {
               <Route path="/account/orders" element={<Account />} />
               <Route path="/account/addresses" element={<Account />} />
               <Route path="/account/profile" element={<Account />} />
+              <Route path="/account/stores" element={<MyStores />} />
+              <Route path="/account/stores/:slug" element={<MyStoreOrders />} />
 
               <Route path="/custom-quote" element={<CustomQuote />} />
               <Route path="/resources" element={<Resources />} />
