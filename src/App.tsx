@@ -17,6 +17,10 @@ import { Signup } from './pages/Signup';
 import { Account } from './pages/Account';
 import { Resources } from './pages/Resources';
 import { Contact } from './pages/Contact';
+import { FileSetup } from './pages/FileSetup';
+import { Materials } from './pages/Materials';
+import { DesignTips } from './pages/DesignTips';
+import { Installation } from './pages/Installation';
 import { CustomQuote } from './pages/CustomQuote';
 import AdminGuard from './components/AdminGuard';
 import MyStores from './pages/account/MyStores';
@@ -98,10 +102,10 @@ function App() {
                 <Route path="/shipping" element={<Resources />} />
                 <Route path="/returns" element={<Resources />} />
                 <Route path="/guarantee" element={<Resources />} />
-                <Route path="/file-setup" element={<Resources />} />
-                <Route path="/materials" element={<Resources />} />
-                <Route path="/design-tips" element={<Resources />} />
-                <Route path="/installation" element={<Resources />} />
+                <Route path="/file-setup" element={<FileSetup />} />
+                <Route path="/materials" element={<Materials />} />
+                <Route path="/design-tips" element={<DesignTips />} />
+                <Route path="/installation" element={<Installation />} />
                 <Route path="/about" element={<Contact />} />
                 <Route path="/privacy" element={<Resources />} />
                 <Route path="/terms" element={<Resources />} />
