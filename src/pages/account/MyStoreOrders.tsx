@@ -57,7 +57,7 @@ export default function MyStoreOrders() {
               style={{ backgroundColor: brandColor }}
             >
               {store.logo_url ? (
-                <img src={store.logo_url} alt={store.name} className="w-full h-full object-contain rounded-xl p-1" style={{ filter: 'brightness(0) invert(1)' }} />
+                <img src={store.logo_url} alt={store.name} className="w-full h-full object-contain rounded-xl p-1" />
               ) : (
                 <span className="text-white font-bold text-sm">{store.name[0]}</span>
               )}

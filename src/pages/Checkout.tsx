@@ -136,7 +136,7 @@ export function Checkout() {
               style={{ backgroundColor: storeContext.primary_color }}
             >
               {storeContext.logo_url ? (
-                <img src={storeContext.logo_url} alt={storeContext.name} className="w-full h-full object-contain p-1 rounded-lg" style={{ filter: 'brightness(0) invert(1)' }} />
+                <img src={storeContext.logo_url} alt={storeContext.name} className="w-full h-full object-contain p-1 rounded-lg" />
               ) : (
                 <Store className="w-4 h-4 text-white" />
               )}

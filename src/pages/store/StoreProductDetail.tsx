@@ -156,7 +156,7 @@ export default function StoreProductDetail() {
           <Link to={`/store/${slug}`} className="text-white/80 hover:text-white flex items-center gap-1 text-sm">
             <ArrowLeft className="w-4 h-4" />
             {store.logo_url ? (
-              <img src={store.logo_url} alt={store.name} className="h-7 object-contain" style={{ filter: 'brightness(0) invert(1)' }} />
+              <div className="bg-white rounded p-1 flex-shrink-0"><img src={store.logo_url} alt={store.name} className="h-5 object-contain" /></div>
             ) : (
               store.name
             )}

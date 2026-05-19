@@ -218,12 +218,9 @@ export default function StoreFront() {
       <div className="py-8 px-4" style={{ backgroundColor: store.primary_color }}>
         <div className="max-w-6xl mx-auto flex items-center gap-4">
           {store.logo_url && (
-            <img
-              src={store.logo_url}
-              alt={store.name}
-              className="h-10 object-contain"
-              style={{ filter: 'brightness(0) invert(1)' }}
-            />
+            <div className="bg-white rounded-lg p-1.5 flex-shrink-0">
+              <img src={store.logo_url} alt={store.name} className="h-8 object-contain" />
+            </div>
           )}
           <h1 className="text-2xl font-bold text-white">{store.name}</h1>
         </div>
