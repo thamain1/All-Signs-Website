@@ -192,6 +192,9 @@ export function DesignEditor() {
   const [proofUrl, setProofUrl] = useState('');
   const [showProofModal, setShowProofModal] = useState(false);
   const [proofLoading, setProofLoading] = useState(false);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [showProductPicker, setShowProductPicker] = useState(false);
+  const [productPickerPending, setProductPickerPending] = useState(false); // true if picker should chain into add-to-cart
 
   // ── Refs ──
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -216,6 +219,7 @@ export function DesignEditor() {
     if (!user) { navigate('/login'); return; }
     loadDesign();
     loadTemplates();
+    loadProducts();
   }, [designId, user]);
 
   useEffect(() => {
@@ -291,6 +295,61 @@ export function DesignEditor() {
       .eq('is_published', true)
       .order('usage_count', { ascending: false });
     setTemplates(data || []);
+  };
+
+  const loadProducts = async () => {
+    const { data } = await supabase
+      .from('products')
+      .select('*')
+      .eq('is_active', true)
+      .order('name');
+    setAllProducts(data || []);
+  };
+
+  // Maps a free-text product_type ('banner') to a category slug ('banners')
+  const productTypeToCategorySlug: Record<string, string> = {
+    banner: 'banners',
+    banners: 'banners',
+    'yard-sign': 'yard-signs',
+    'yard-signs': 'yard-signs',
+    'rigid-sign': 'rigid-signs',
+    'rigid-signs': 'rigid-signs',
+    flag: 'flags',
+    flags: 'flags',
+    'feather-flag': 'flags',
+    decal: 'decals-rectangle',
+    decals: 'decals-rectangle',
+    magnet: 'vehicle-graphics',
+    magnets: 'vehicle-graphics',
+    'vehicle-magnet': 'vehicle-graphics',
+    'trade-show': 'trade-show',
+  };
+
+  // Pick a default product matching the design's product_type
+  const inferProductForDesign = (d: Design): Product | null => {
+    const target = productTypeToCategorySlug[d.product_type] || d.product_type;
+    return allProducts.find(p => p.size_preset_category === target) || null;
+  };
+
+  const linkProductToDesign = async (productId: string) => {
+    if (!designRef.current) return;
+    const prod = allProducts.find(p => p.id === productId);
+    if (!prod) return;
+    const updated = { ...designRef.current, product_id: productId };
+    setDesign(updated);
+    designRef.current = updated;
+    setProduct(prod);
+    await supabase.from('designs').update({ product_id: productId, updated_at: new Date().toISOString() }).eq('id', updated.id);
+  };
+
+  const pickProduct = async (productId: string) => {
+    await linkProductToDesign(productId);
+    setShowProductPicker(false);
+    if (productPickerPending) {
+      setProductPickerPending(false);
+      // Resume the add-to-cart flow now that we have a product
+      handleAddToCart();
+    }
   };
 
   // ── Canvas ──
@@ -832,6 +891,12 @@ export function DesignEditor() {
 
   const handleAddToCart = async () => {
     if (!design || !fabricRef.current) return;
+    // If no product is linked yet, ask the user to pick one before continuing.
+    if (!designRef.current?.product_id) {
+      setProductPickerPending(true);
+      setShowProductPicker(true);
+      return;
+    }
     const dims = getDimensions()!;
     const result = runPreflightChecks(fabricRef.current, dims);
     setPreflight(result);
@@ -850,7 +915,11 @@ export function DesignEditor() {
 
   const executeAddToCart = async () => {
     const d = designRef.current;
-    if (!d?.product_id) { alert('This design is not linked to a product.'); return; }
+    if (!d?.product_id) {
+      setProductPickerPending(true);
+      setShowProductPicker(true);
+      return;
+    }
     setShowPreflight(false);
     await saveDesign();
     const v = d.variant_snapshot || {};
@@ -1042,6 +1111,31 @@ export function DesignEditor() {
                 <Star className="w-4 h-4 text-gray-500" /> Star
               </button>
             </div>
+          </div>
+
+          <div className="p-3 border-b border-gray-100">
+            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Product</p>
+            {product ? (
+              <button
+                onClick={() => setShowProductPicker(true)}
+                className="w-full flex items-center justify-between gap-2 px-2 py-2 border border-gray-200 rounded hover:bg-gray-50 transition-colors text-left"
+                title="Change product"
+              >
+                <div className="min-w-0">
+                  <p className="text-xs font-medium text-gray-900 truncate">{product.name}</p>
+                  <p className="text-[10px] text-gray-500 truncate">{product.size_preset_category || 'custom'}</p>
+                </div>
+                <Pencil className="w-3 h-3 text-gray-400 flex-shrink-0" />
+              </button>
+            ) : (
+              <button
+                onClick={() => setShowProductPicker(true)}
+                className="w-full flex items-center justify-center gap-2 px-2 py-2 border border-dashed border-yellow-400 bg-yellow-50 rounded hover:bg-yellow-100 text-xs text-yellow-800 transition-colors"
+              >
+                <AlertTriangle className="w-3.5 h-3.5" />
+                Choose a product
+              </button>
+            )}
           </div>
 
           <div className="p-3 border-b border-gray-100">
@@ -1490,6 +1584,65 @@ export function DesignEditor() {
                 </button>
               ))}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Product picker modal ── */}
+      {showProductPicker && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 max-w-2xl w-full max-h-[85vh] overflow-y-auto shadow-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">Choose a Product</h2>
+                <p className="text-sm text-gray-500 mt-1">
+                  {productPickerPending
+                    ? 'Pick the product this design will be printed on, then we\'ll add it to your cart.'
+                    : 'Pick the product this design will be printed on.'}
+                </p>
+              </div>
+              <button onClick={() => { setShowProductPicker(false); setProductPickerPending(false); }} className="text-gray-400 hover:text-gray-700">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {allProducts.length === 0 ? (
+              <p className="text-center text-sm text-gray-500 py-8">No products available.</p>
+            ) : (
+              <>
+                {design && inferProductForDesign(design) && (
+                  <div className="mb-3 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-700">
+                    Suggested based on your design type: <strong>{inferProductForDesign(design)!.name}</strong>
+                  </div>
+                )}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {allProducts.map(p => {
+                    const isCurrent = design?.product_id === p.id;
+                    const isSuggested = design && inferProductForDesign(design)?.id === p.id;
+                    return (
+                      <button
+                        key={p.id}
+                        onClick={() => pickProduct(p.id)}
+                        className={`text-left p-3 rounded-lg border-2 transition-colors ${
+                          isCurrent
+                            ? 'border-green-500 bg-green-50'
+                            : isSuggested
+                            ? 'border-blue-300 bg-blue-50 hover:bg-blue-100'
+                            : 'border-gray-200 hover:bg-gray-50 hover:border-gray-300'
+                        }`}
+                      >
+                        <p className="font-semibold text-sm text-gray-900">{p.name}</p>
+                        <p className="text-xs text-gray-500 mt-0.5 capitalize">
+                          {p.size_preset_category?.replace(/-/g, ' ') || 'custom'}
+                          {isCurrent && ' · current'}
+                          {!isCurrent && isSuggested && ' · suggested'}
+                        </p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

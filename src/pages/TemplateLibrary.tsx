@@ -48,10 +48,31 @@ export function TemplateLibrary() {
   const createDesignFromTemplate = async (template: Template | null) => {
     if (!user) return;
 
+    // Resolve a default product_id from product_type so the design is shoppable.
+    // Mirrors the productTypeToCategorySlug map in DesignEditor.tsx.
+    const slugMap: Record<string, string> = {
+      banner: 'banners', banners: 'banners',
+      'yard-sign': 'yard-signs', 'yard-signs': 'yard-signs',
+      'rigid-sign': 'rigid-signs', 'rigid-signs': 'rigid-signs',
+      flag: 'flags', flags: 'flags', 'feather-flag': 'flags',
+      decal: 'decals-rectangle', decals: 'decals-rectangle',
+      magnet: 'vehicle-graphics', magnets: 'vehicle-graphics', 'vehicle-magnet': 'vehicle-graphics',
+      'trade-show': 'trade-show',
+    };
+    const categorySlug = slugMap[productType] || productType;
+    const { data: matchingProducts } = await supabase
+      .from('products')
+      .select('id')
+      .eq('is_active', true)
+      .eq('size_preset_category', categorySlug)
+      .limit(1);
+    const defaultProductId = matchingProducts?.[0]?.id || null;
+
     const designData = {
       user_id: user.id,
       name: template ? `${template.name} Copy` : 'New Design',
       template_id: template?.id || null,
+      product_id: defaultProductId,
       product_type: productType,
       variant_snapshot: {
         product_type: productType,
