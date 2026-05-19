@@ -21,7 +21,9 @@ export function Contact() {
                   <Phone className="w-6 h-6 text-green-600 flex-shrink-0 mt-1" />
                   <div>
                     <h3 className="font-semibold text-gray-900 mb-1">Phone</h3>
-                    <p className="text-gray-600">1-800-ALL-SIGN</p>
+                    <p className="text-gray-600">
+                      <a href="tel:+19103233115" className="hover:text-green-600 transition">910-323-3115</a>
+                    </p>
                     <p className="text-sm text-gray-500">Mon-Fri 8AM-6PM EST</p>
                   </div>
                 </div>
@@ -41,8 +43,8 @@ export function Contact() {
                 <div>
                   <h3 className="font-semibold text-gray-900 mb-1">Address</h3>
                   <p className="text-gray-600">
-                    123 Print Way<br />
-                    Charlotte, NC 28202
+                    301 Hope Mills Rd.<br />
+                    Fayetteville, NC 28304
                   </p>
                 </div>
               </div>

@@ -55,7 +55,7 @@ export function Footer() {
                 <li className="flex items-start gap-2">
                   <Phone className="w-5 h-5 flex-shrink-0 mt-0.5" />
                   <div>
-                    <div>1-800-ALL-SIGN</div>
+                    <a href="tel:+19103233115" className="hover:text-white transition">910-323-3115</a>
                     <div className="text-xs text-gray-400">Mon-Fri 8AM-6PM EST</div>
                   </div>
                 </li>
@@ -69,8 +69,8 @@ export function Footer() {
               <li className="flex items-start gap-2">
                 <MapPin className="w-5 h-5 flex-shrink-0 mt-0.5" />
                 <div>
-                  123 Print Way<br />
-                  Charlotte, NC 28202
+                  301 Hope Mills Rd.<br />
+                  Fayetteville, NC 28304
                 </div>
               </li>
             </ul>
