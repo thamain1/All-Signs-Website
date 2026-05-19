@@ -1,28 +1,75 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Canvas, IText, Rect, Image as FabricImage, Object as FabricObject } from 'fabric';
-import debounce from 'lodash.debounce';
+import { Canvas, IText, Rect, Circle as FabricCircle, Image as FabricImage, Object as FabricObject } from 'fabric';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useCart } from '../contexts/CartContext';
 import { Design, PreflightCheck, Product } from '../types';
-import { exportCanvasToImage, runPreflightChecks, inchesToPixels } from '../lib/designStudio';
-import { Loader2, Save, ShoppingCart, Type, Image as ImageIcon, Square, AlertTriangle, Check, Trash2, ArrowUp, ArrowDown, ChevronsUp, ChevronsDown } from 'lucide-react';
+import {
+  exportCanvasToImage,
+  exportCanvasToPDF,
+  runPreflightChecks,
+  inchesToPixels,
+  CanvasDimensions,
+} from '../lib/designStudio';
+import {
+  Loader2, Check, AlertTriangle, ShoppingCart,
+  Type, Image as ImageIcon, Square, Circle as LucideCircle,
+  Undo2, Redo2, Download, Trash2, Pencil,
+  ChevronsUp, ChevronsDown, ArrowUp, ArrowDown,
+  AlignLeft, AlignCenter, AlignRight,
+  Bold, Italic, Underline,
+  Eye, EyeOff,
+} from 'lucide-react';
 import SizeSelector from '../components/SizeSelector';
 
 const AVAILABLE_FONTS = [
-  'Arial',
-  'Inter',
-  'Montserrat',
-  'Poppins',
-  'Oswald',
-  'Roboto Slab',
-  'Bebas Neue',
-  'Times New Roman',
-  'Courier New',
-  'Georgia',
-  'Verdana',
+  'Arial', 'Inter', 'Montserrat', 'Poppins', 'Oswald',
+  'Roboto Slab', 'Bebas Neue', 'Times New Roman',
+  'Courier New', 'Georgia', 'Verdana',
 ];
+
+type SelState = {
+  type: string;
+  fontFamily: string;
+  fontSize: number;
+  fontWeight: string;
+  fontStyle: string;
+  underline: boolean;
+  fill: string;
+  stroke: string;
+  strokeWidth: number;
+  opacity: number;
+};
+
+const DEFAULT_SEL: SelState = {
+  type: '',
+  fontFamily: 'Arial',
+  fontSize: 36,
+  fontWeight: 'normal',
+  fontStyle: 'normal',
+  underline: false,
+  fill: '#000000',
+  stroke: '',
+  strokeWidth: 0,
+  opacity: 1,
+};
+
+function syncSelFromObj(obj: FabricObject): SelState {
+  const o = obj as any;
+  return {
+    type: obj.type || '',
+    fontFamily: o.fontFamily || 'Arial',
+    fontSize: o.fontSize || 36,
+    fontWeight: o.fontWeight || 'normal',
+    fontStyle: o.fontStyle || 'normal',
+    underline: !!o.underline,
+    fill: typeof o.fill === 'string' ? o.fill : '#000000',
+    stroke: o.stroke || '',
+    strokeWidth: o.strokeWidth || 0,
+    opacity: typeof o.opacity === 'number' ? o.opacity : 1,
+  };
+}
 
 export function DesignEditor() {
   const { designId } = useParams<{ designId: string }>();
@@ -35,237 +82,263 @@ export function DesignEditor() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
-  const [canvas, setCanvas] = useState<Canvas | null>(null);
   const [preflight, setPreflight] = useState<PreflightCheck | null>(null);
   const [showPreflight, setShowPreflight] = useState(false);
-  const [selectedObject, setSelectedObject] = useState<FabricObject | null>(null);
-  const [currentFont, setCurrentFont] = useState<string>('Arial');
-  const [currentColor, setCurrentColor] = useState<string>('#000000');
-  const [canvasScale, setCanvasScale] = useState<number>(1);
+  const [preflightCartMode, setPreflightCartMode] = useState(false);
+  const [selectedObj, setSelectedObj] = useState<FabricObject | null>(null);
+  const [sel, setSel] = useState<SelState>(DEFAULT_SEL);
+  const [canvasScale, setCanvasScale] = useState(1);
+  const [bgColor, setBgColor] = useState('#ffffff');
+  const [showSafeZone, setShowSafeZone] = useState(true);
+  const [editingName, setEditingName] = useState(false);
+  const [designName, setDesignName] = useState('');
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
+  const [showDownloadMenu, setShowDownloadMenu] = useState(false);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const fabricCanvasRef = useRef<Canvas | null>(null);
+  const fabricRef = useRef<Canvas | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const designRef = useRef<Design | null>(null);
+  const historyRef = useRef<string[]>([]);
+  const historyIdxRef = useRef(-1);
+  const isRestoringRef = useRef(false);
+  const clipboardRef = useRef<FabricObject | null>(null);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const nameInputRef = useRef<HTMLInputElement>(null);
+
+  // keep designRef in sync so event-handler closures never go stale
+  useEffect(() => {
+    designRef.current = design;
+    if (design && !designName) setDesignName(design.name);
+  }, [design]);
 
   useEffect(() => {
-    if (!user) {
-      navigate('/login');
-      return;
-    }
+    if (!user) { navigate('/login'); return; }
     loadDesign();
   }, [designId, user]);
 
   useEffect(() => {
-    if (canvasRef.current && design && !fabricCanvasRef.current) {
-      initializeCanvas();
+    if (canvasRef.current && design && !fabricRef.current) {
+      initCanvas();
     }
-
     return () => {
-      if (fabricCanvasRef.current) {
-        fabricCanvasRef.current.dispose();
-        fabricCanvasRef.current = null;
+      if (fabricRef.current) {
+        fabricRef.current.dispose();
+        fabricRef.current = null;
       }
     };
   }, [design]);
 
   useEffect(() => {
-    const handleResize = () => {
-      if (!containerRef.current || !design || !fabricCanvasRef.current) return;
+    const onResize = () => recalcScale();
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
-      const dpi = 150;
-      const widthPx = inchesToPixels(design.width_in, dpi);
-      const heightPx = inchesToPixels(design.height_in, dpi);
-
-      const containerWidth = containerRef.current.clientWidth - 64;
-      const containerHeight = containerRef.current.clientHeight - 64;
-
-      const scaleX = containerWidth / widthPx;
-      const scaleY = containerHeight / heightPx;
-      const scale = Math.min(scaleX, scaleY, 1);
-
-      setCanvasScale(scale);
-
-      fabricCanvasRef.current.setZoom(scale);
-      fabricCanvasRef.current.setDimensions({
-        width: widthPx * scale,
-        height: heightPx * scale,
-      });
-      fabricCanvasRef.current.renderAll();
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [design]);
-
+  // keyboard shortcuts — all use refs so empty-dep closure is fine
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (!fabricCanvasRef.current) return;
-
-      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedObject) {
-        const target = e.target as HTMLElement;
-        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
-          return;
-        }
-        e.preventDefault();
-        deleteSelectedObject();
+    const onKey = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement).tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+      const ctrl = e.ctrlKey || e.metaKey;
+      if (ctrl && e.key === 'z' && !e.shiftKey) { e.preventDefault(); undoHistory(); return; }
+      if (ctrl && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) { e.preventDefault(); redoHistory(); return; }
+      if (ctrl && e.key === 'c') { e.preventDefault(); copySelected(); return; }
+      if (ctrl && e.key === 'v') { e.preventDefault(); pasteClipboard(); return; }
+      if ((e.key === 'Delete' || e.key === 'Backspace') && fabricRef.current?.getActiveObject()) {
+        e.preventDefault(); deleteSelected();
       }
     };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedObject]);
+  // close download menu on outside click
+  useEffect(() => {
+    if (!showDownloadMenu) return;
+    const close = () => setShowDownloadMenu(false);
+    document.addEventListener('click', close);
+    return () => document.removeEventListener('click', close);
+  }, [showDownloadMenu]);
+
+  // ——— Data loading ———
 
   const loadDesign = async () => {
-    const { data, error } = await supabase
-      .from('designs')
-      .select('*')
-      .eq('id', designId)
-      .maybeSingle();
-
-    if (error || !data) {
-      console.error('Error loading design:', error);
-      navigate('/account/designs');
-      return;
-    }
-
+    const { data, error } = await supabase.from('designs').select('*').eq('id', designId).maybeSingle();
+    if (error || !data) { navigate('/account/designs'); return; }
     setDesign(data);
-
+    setDesignName(data.name);
     if (data.product_id) {
-      const { data: productData } = await supabase
-        .from('products')
-        .select('*')
-        .eq('id', data.product_id)
-        .maybeSingle();
-
-      if (productData) {
-        setProduct(productData);
-      }
+      const { data: prod } = await supabase.from('products').select('*').eq('id', data.product_id).maybeSingle();
+      if (prod) setProduct(prod);
     }
-
     setLoading(false);
   };
 
-  const initializeCanvas = async () => {
-    if (!canvasRef.current || !design || !containerRef.current) return;
+  // ——— Canvas helpers ———
 
+  const getDimensions = (): CanvasDimensions | null => {
+    const d = designRef.current;
+    if (!d) return null;
+    return { widthIn: d.width_in, heightIn: d.height_in, bleedIn: d.bleed_in, safeZoneIn: d.safe_zone_in };
+  };
+
+  const recalcScale = () => {
+    if (!containerRef.current || !designRef.current || !fabricRef.current) return;
+    const d = designRef.current;
+    const wPx = inchesToPixels(d.width_in, 150);
+    const hPx = inchesToPixels(d.height_in, 150);
+    const cw = containerRef.current.clientWidth - 64;
+    const ch = containerRef.current.clientHeight - 64;
+    const scale = Math.min(cw / wPx, ch / hPx, 1);
+    setCanvasScale(scale);
+    fabricRef.current.setZoom(scale);
+    fabricRef.current.setDimensions({ width: wPx * scale, height: hPx * scale });
+    fabricRef.current.renderAll();
+  };
+
+  const initCanvas = async () => {
+    if (!canvasRef.current || !design || !containerRef.current) return;
     await document.fonts.ready;
 
-    const dpi = 150;
-    const widthPx = inchesToPixels(design.width_in, dpi);
-    const heightPx = inchesToPixels(design.height_in, dpi);
-
-    const containerWidth = containerRef.current.clientWidth - 64;
-    const containerHeight = containerRef.current.clientHeight - 64;
-
-    const scaleX = containerWidth / widthPx;
-    const scaleY = containerHeight / heightPx;
-    const scale = Math.min(scaleX, scaleY, 1);
-
+    const wPx = inchesToPixels(design.width_in, 150);
+    const hPx = inchesToPixels(design.height_in, 150);
+    const cw = containerRef.current.clientWidth - 64;
+    const ch = containerRef.current.clientHeight - 64;
+    const scale = Math.min(cw / wPx, ch / hPx, 1);
     setCanvasScale(scale);
 
-    const fabricCanvas = new Canvas(canvasRef.current, {
-      width: widthPx * scale,
-      height: heightPx * scale,
+    const fc = new Canvas(canvasRef.current, {
+      width: wPx * scale,
+      height: hPx * scale,
       backgroundColor: '#ffffff',
     });
-
-    fabricCanvas.setZoom(scale);
-    fabricCanvas.setDimensions({
-      width: widthPx * scale,
-      height: heightPx * scale,
-    });
+    fc.setZoom(scale);
 
     let editorData = design.editor_json;
     if (typeof editorData === 'string') {
-      try {
-        editorData = JSON.parse(editorData);
-      } catch (e) {
-        console.error('Failed to parse editor_json:', e);
-        editorData = null;
-      }
+      try { editorData = JSON.parse(editorData); } catch { editorData = null; }
     }
-
-    if (editorData && editorData.objects && editorData.objects.length > 0) {
-      await new Promise<void>((resolve) => {
-        fabricCanvas.loadFromJSON(editorData, () => {
-          fabricCanvas.renderAll();
-          resolve();
-        });
+    if (editorData?.objects?.length) {
+      await new Promise<void>(resolve => {
+        fc.loadFromJSON(editorData, () => { fc.renderAll(); resolve(); });
       });
     }
 
-    fabricCanvas.on('object:modified', handleCanvasChange);
-    fabricCanvas.on('object:added', handleCanvasChange);
-    fabricCanvas.on('object:removed', handleCanvasChange);
-    fabricCanvas.on('selection:created', (e) => {
-      const obj = e.selected?.[0];
-      setSelectedObject(obj || null);
-      if (obj && obj.type === 'i-text') {
-        setCurrentFont((obj as any).fontFamily || 'Arial');
-        setCurrentColor((obj as any).fill || '#000000');
-      }
-    });
-    fabricCanvas.on('selection:updated', (e) => {
-      const obj = e.selected?.[0];
-      setSelectedObject(obj || null);
-      if (obj && obj.type === 'i-text') {
-        setCurrentFont((obj as any).fontFamily || 'Arial');
-        setCurrentColor((obj as any).fill || '#000000');
-      }
-    });
-    fabricCanvas.on('selection:cleared', () => {
-      setSelectedObject(null);
-    });
+    // sync bg state from loaded JSON
+    if (typeof fc.backgroundColor === 'string') setBgColor(fc.backgroundColor);
 
-    fabricCanvasRef.current = fabricCanvas;
-    setCanvas(fabricCanvas);
+    // bootstrap history
+    historyRef.current = [JSON.stringify(fc.toJSON())];
+    historyIdxRef.current = 0;
+
+    fc.on('object:modified', onCanvasChange);
+    fc.on('object:added', onCanvasChange);
+    fc.on('object:removed', onCanvasChange);
+
+    const updateSel = (obj?: FabricObject) => {
+      setSelectedObj(obj || null);
+      setSel(obj ? syncSelFromObj(obj) : DEFAULT_SEL);
+    };
+    fc.on('selection:created', e => updateSel(e.selected?.[0]));
+    fc.on('selection:updated', e => updateSel(e.selected?.[0]));
+    fc.on('selection:cleared', () => updateSel());
+
+    fabricRef.current = fc;
   };
 
-  const handleCanvasChange = debounce(() => {
-    saveDesign();
-  }, 3000);
+  // ——— Auto-save + history ———
+
+  const scheduleSave = () => {
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(saveDesign, 3000);
+  };
+
+  const onCanvasChange = () => {
+    if (isRestoringRef.current) return;
+    pushHistory();
+    scheduleSave();
+  };
+
+  const pushHistory = () => {
+    if (!fabricRef.current || isRestoringRef.current) return;
+    const snap = JSON.stringify(fabricRef.current.toJSON());
+    if (historyIdxRef.current < historyRef.current.length - 1) {
+      historyRef.current = historyRef.current.slice(0, historyIdxRef.current + 1);
+    }
+    historyRef.current.push(snap);
+    if (historyRef.current.length > 50) historyRef.current.shift();
+    else historyIdxRef.current++;
+    setCanUndo(historyIdxRef.current > 0);
+    setCanRedo(false);
+  };
+
+  const restoreHistory = async (snap: string) => {
+    if (!fabricRef.current) return;
+    isRestoringRef.current = true;
+    const data = JSON.parse(snap);
+    await new Promise<void>(resolve => {
+      fabricRef.current!.loadFromJSON(data, () => {
+        fabricRef.current!.discardActiveObject();
+        fabricRef.current!.renderAll();
+        resolve();
+      });
+    });
+    isRestoringRef.current = false;
+    if (typeof fabricRef.current.backgroundColor === 'string') {
+      setBgColor(fabricRef.current.backgroundColor);
+    }
+    setSelectedObj(null);
+    setSel(DEFAULT_SEL);
+  };
+
+  const undoHistory = async () => {
+    if (historyIdxRef.current <= 0) return;
+    historyIdxRef.current--;
+    await restoreHistory(historyRef.current[historyIdxRef.current]);
+    setCanUndo(historyIdxRef.current > 0);
+    setCanRedo(true);
+    scheduleSave();
+  };
+
+  const redoHistory = async () => {
+    if (historyIdxRef.current >= historyRef.current.length - 1) return;
+    historyIdxRef.current++;
+    await restoreHistory(historyRef.current[historyIdxRef.current]);
+    setCanUndo(true);
+    setCanRedo(historyIdxRef.current < historyRef.current.length - 1);
+    scheduleSave();
+  };
 
   const saveDesign = async () => {
-    if (!fabricCanvasRef.current || !design) return;
-
+    if (!fabricRef.current || !designRef.current) return;
     setSaving(true);
-
     try {
-      const currentZoom = fabricCanvasRef.current.getZoom();
-      const currentWidth = fabricCanvasRef.current.width;
-      const currentHeight = fabricCanvasRef.current.height;
+      const d = designRef.current;
+      const wPx = inchesToPixels(d.width_in, 150);
+      const hPx = inchesToPixels(d.height_in, 150);
+      const prevZoom = fabricRef.current.getZoom();
+      const prevW = fabricRef.current.width!;
+      const prevH = fabricRef.current.height!;
 
-      fabricCanvasRef.current.setZoom(1);
-      const dpi = 150;
-      const widthPx = inchesToPixels(design.width_in, dpi);
-      const heightPx = inchesToPixels(design.height_in, dpi);
-      fabricCanvasRef.current.setDimensions({
-        width: widthPx,
-        height: heightPx,
-      });
+      fabricRef.current.setZoom(1);
+      fabricRef.current.setDimensions({ width: wPx, height: hPx });
 
-      const editorJson = fabricCanvasRef.current.toJSON();
-      const previewImage = await exportCanvasToImage(fabricCanvasRef.current, 0.5);
+      const editorJson = fabricRef.current.toJSON();
+      const preview = await exportCanvasToImage(fabricRef.current, 0.5);
 
-      fabricCanvasRef.current.setZoom(currentZoom);
-      fabricCanvasRef.current.setDimensions({
-        width: currentWidth || widthPx * currentZoom,
-        height: currentHeight || heightPx * currentZoom,
-      });
-      fabricCanvasRef.current.renderAll();
+      fabricRef.current.setZoom(prevZoom);
+      fabricRef.current.setDimensions({ width: prevW, height: prevH });
+      fabricRef.current.renderAll();
 
-      const { error } = await supabase
-        .from('designs')
-        .update({
-          editor_json: editorJson,
-          preview_png_url: previewImage,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', design.id);
+      await supabase.from('designs').update({
+        editor_json: editorJson,
+        preview_png_url: preview,
+        updated_at: new Date().toISOString(),
+      }).eq('id', d.id);
 
-      if (!error) {
-        setLastSaved(new Date());
-      }
+      setLastSaved(new Date());
     } catch (err) {
       console.error('Save error:', err);
     } finally {
@@ -273,230 +346,268 @@ export function DesignEditor() {
     }
   };
 
-  const handleFontChange = (fontFamily: string) => {
-    if (!fabricCanvasRef.current || !selectedObject) return;
+  // ——— Object manipulation ———
 
-    if (selectedObject.type === 'i-text') {
-      (selectedObject as any).set('fontFamily', fontFamily);
-      fabricCanvasRef.current.renderAll();
-      setCurrentFont(fontFamily);
-      handleCanvasChange();
-    }
-  };
-
-  const handleColorChange = (color: string) => {
-    if (!fabricCanvasRef.current || !selectedObject) return;
-
-    if (selectedObject.type === 'i-text') {
-      (selectedObject as any).set('fill', color);
-      fabricCanvasRef.current.renderAll();
-      setCurrentColor(color);
-      handleCanvasChange();
-    }
+  const applyProp = (props: Record<string, unknown>) => {
+    const obj = fabricRef.current?.getActiveObject();
+    if (!obj || !fabricRef.current) return;
+    obj.set(props as Parameters<typeof obj.set>[0]);
+    fabricRef.current.renderAll();
+    setSel(prev => ({ ...prev, ...props } as SelState));
+    pushHistory();
+    scheduleSave();
   };
 
   const addText = () => {
-    if (!fabricCanvasRef.current || !design) return;
-
-    const dpi = 150;
-    const widthPx = inchesToPixels(design.width_in, dpi);
-    const heightPx = inchesToPixels(design.height_in, dpi);
-
-    const text = new IText('Double-click to edit', {
-      left: widthPx * 0.1,
-      top: heightPx * 0.1,
-      fontSize: widthPx * 0.04,
+    if (!fabricRef.current || !designRef.current) return;
+    const d = designRef.current;
+    const wPx = inchesToPixels(d.width_in, 150);
+    const hPx = inchesToPixels(d.height_in, 150);
+    const text = new IText('Your Text Here', {
+      left: wPx * 0.1,
+      top: hPx * 0.4,
+      fontSize: Math.max(24, Math.round(wPx * 0.05)),
       fill: '#000000',
       fontFamily: 'Arial',
     });
-
-    fabricCanvasRef.current.add(text);
-    fabricCanvasRef.current.setActiveObject(text);
-    fabricCanvasRef.current.renderAll();
+    fabricRef.current.add(text);
+    fabricRef.current.setActiveObject(text);
+    fabricRef.current.renderAll();
   };
 
   const addRectangle = () => {
-    if (!fabricCanvasRef.current || !design) return;
-
-    const dpi = 150;
-    const widthPx = inchesToPixels(design.width_in, dpi);
-    const heightPx = inchesToPixels(design.height_in, dpi);
-
-    const rect = new Rect({
-      left: widthPx * 0.15,
-      top: heightPx * 0.15,
-      width: widthPx * 0.2,
-      height: heightPx * 0.1,
+    if (!fabricRef.current || !designRef.current) return;
+    const d = designRef.current;
+    const wPx = inchesToPixels(d.width_in, 150);
+    const hPx = inchesToPixels(d.height_in, 150);
+    fabricRef.current.add(new Rect({
+      left: wPx * 0.2, top: hPx * 0.2,
+      width: wPx * 0.3, height: hPx * 0.2,
       fill: '#3B82F6',
-    });
+    }));
+    fabricRef.current.renderAll();
+  };
 
-    fabricCanvasRef.current.add(rect);
-    fabricCanvasRef.current.setActiveObject(rect);
-    fabricCanvasRef.current.renderAll();
+  const addCircle = () => {
+    if (!fabricRef.current || !designRef.current) return;
+    const d = designRef.current;
+    const wPx = inchesToPixels(d.width_in, 150);
+    const hPx = inchesToPixels(d.height_in, 150);
+    fabricRef.current.add(new FabricCircle({
+      left: wPx * 0.2, top: hPx * 0.2,
+      radius: Math.min(wPx, hPx) * 0.12,
+      fill: '#10B981',
+    }));
+    fabricRef.current.renderAll();
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || !e.target.files[0] || !fabricCanvasRef.current || !design) return;
-
-    const file = e.target.files[0];
+    const file = e.target.files?.[0];
+    if (!file || !fabricRef.current || !designRef.current) return;
     const reader = new FileReader();
-
-    reader.onload = (event) => {
-      const imgUrl = event.target?.result as string;
-
-      const dpi = 150;
-      const widthPx = inchesToPixels(design.width_in, dpi);
-      const heightPx = inchesToPixels(design.height_in, dpi);
-
-      FabricImage.fromURL(imgUrl).then((img) => {
-        const maxWidth = widthPx * 0.3;
-        img.scaleToWidth(maxWidth);
-        img.set({ left: widthPx * 0.1, top: heightPx * 0.1 });
-
-        fabricCanvasRef.current?.add(img);
-        fabricCanvasRef.current?.setActiveObject(img);
-        fabricCanvasRef.current?.renderAll();
+    reader.onload = ev => {
+      const url = ev.target?.result as string;
+      const d = designRef.current!;
+      const wPx = inchesToPixels(d.width_in, 150);
+      const hPx = inchesToPixels(d.height_in, 150);
+      FabricImage.fromURL(url).then(img => {
+        // scale to fit half the canvas, centered
+        const scale = Math.min((wPx * 0.5) / (img.width || 1), (hPx * 0.5) / (img.height || 1));
+        const scaledW = (img.width || 0) * scale;
+        const scaledH = (img.height || 0) * scale;
+        img.scale(scale);
+        img.set({ left: (wPx - scaledW) / 2, top: (hPx - scaledH) / 2 });
+        fabricRef.current?.add(img);
+        fabricRef.current?.setActiveObject(img);
+        fabricRef.current?.renderAll();
       });
     };
-
     reader.readAsDataURL(file);
+    e.target.value = '';
   };
 
-  const deleteSelectedObject = () => {
-    if (!fabricCanvasRef.current || !selectedObject) return;
-
-    fabricCanvasRef.current.remove(selectedObject);
-    fabricCanvasRef.current.discardActiveObject();
-    fabricCanvasRef.current.renderAll();
-    setSelectedObject(null);
-    handleCanvasChange();
+  const deleteSelected = () => {
+    const obj = fabricRef.current?.getActiveObject();
+    if (!obj || !fabricRef.current) return;
+    fabricRef.current.remove(obj);
+    fabricRef.current.discardActiveObject();
+    fabricRef.current.renderAll();
+    setSelectedObj(null);
+    setSel(DEFAULT_SEL);
+    pushHistory();
+    scheduleSave();
   };
 
-  const bringToFront = () => {
-    if (!fabricCanvasRef.current || !selectedObject) return;
-
-    fabricCanvasRef.current.bringObjectToFront(selectedObject);
-    fabricCanvasRef.current.renderAll();
-    handleCanvasChange();
+  const copySelected = () => {
+    const obj = fabricRef.current?.getActiveObject();
+    if (!obj) return;
+    obj.clone().then((c: FabricObject) => { clipboardRef.current = c; });
   };
 
-  const sendToBack = () => {
-    if (!fabricCanvasRef.current || !selectedObject) return;
-
-    fabricCanvasRef.current.sendObjectToBack(selectedObject);
-    fabricCanvasRef.current.renderAll();
-    handleCanvasChange();
-  };
-
-  const bringForward = () => {
-    if (!fabricCanvasRef.current || !selectedObject) return;
-
-    fabricCanvasRef.current.bringObjectForward(selectedObject);
-    fabricCanvasRef.current.renderAll();
-    handleCanvasChange();
-  };
-
-  const sendBackward = () => {
-    if (!fabricCanvasRef.current || !selectedObject) return;
-
-    fabricCanvasRef.current.sendObjectBackwards(selectedObject);
-    fabricCanvasRef.current.renderAll();
-    handleCanvasChange();
-  };
-
-  const runPreflight = () => {
-    if (!fabricCanvasRef.current || !design) return;
-
-    const result = runPreflightChecks(fabricCanvasRef.current, {
-      widthIn: design.width_in,
-      heightIn: design.height_in,
-      bleedIn: design.bleed_in,
-      safeZoneIn: design.safe_zone_in,
+  const pasteClipboard = () => {
+    if (!clipboardRef.current || !fabricRef.current) return;
+    clipboardRef.current.clone().then((c: FabricObject) => {
+      c.set({ left: (c.left || 0) + 20, top: (c.top || 0) + 20 });
+      fabricRef.current!.add(c);
+      fabricRef.current!.setActiveObject(c);
+      fabricRef.current!.renderAll();
+      pushHistory();
+      scheduleSave();
     });
-
-    setPreflight(result);
-    setShowPreflight(true);
   };
 
-  const handleSizeChange = async (newWidth: number, newHeight: number) => {
-    if (!design || !fabricCanvasRef.current || !containerRef.current) return;
-
-    const updatedDesign = {
-      ...design,
-      width_in: newWidth,
-      height_in: newHeight,
-    };
-
-    setDesign(updatedDesign);
-
-    const { error } = await supabase
-      .from('designs')
-      .update({
-        width_in: newWidth,
-        height_in: newHeight,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', design.id);
-
-    if (error) {
-      console.error('Error updating design size:', error);
-      return;
+  const alignObject = (action: string) => {
+    const obj = fabricRef.current?.getActiveObject();
+    const fc = fabricRef.current;
+    if (!obj || !fc || !designRef.current) return;
+    const d = designRef.current;
+    const wPx = inchesToPixels(d.width_in, 150);
+    const hPx = inchesToPixels(d.height_in, 150);
+    const br = obj.getBoundingRect();
+    switch (action) {
+      case 'left':    obj.set({ left: (obj.left || 0) - br.left }); break;
+      case 'centerH': obj.set({ left: (obj.left || 0) + (wPx / 2 - br.left - br.width / 2) }); break;
+      case 'right':   obj.set({ left: (obj.left || 0) + (wPx - br.left - br.width) }); break;
+      case 'top':     obj.set({ top: (obj.top || 0) - br.top }); break;
+      case 'centerV': obj.set({ top: (obj.top || 0) + (hPx / 2 - br.top - br.height / 2) }); break;
+      case 'bottom':  obj.set({ top: (obj.top || 0) + (hPx - br.top - br.height) }); break;
     }
-
-    const currentZoom = fabricCanvasRef.current.getZoom();
-    const dpi = 150;
-    const widthPx = inchesToPixels(newWidth, dpi);
-    const heightPx = inchesToPixels(newHeight, dpi);
-
-    const containerWidth = containerRef.current.clientWidth - 64;
-    const containerHeight = containerRef.current.clientHeight - 64;
-
-    const scaleX = containerWidth / widthPx;
-    const scaleY = containerHeight / heightPx;
-    const scale = Math.min(scaleX, scaleY, 1);
-
-    setCanvasScale(scale);
-
-    fabricCanvasRef.current.setZoom(scale);
-    fabricCanvasRef.current.setDimensions({
-      width: widthPx * scale,
-      height: heightPx * scale,
-    });
-    fabricCanvasRef.current.renderAll();
+    (obj as any).setCoords?.();
+    fc.renderAll();
+    pushHistory();
+    scheduleSave();
   };
+
+  const changeBgColor = (color: string) => {
+    if (!fabricRef.current) return;
+    setBgColor(color);
+    (fabricRef.current as any).backgroundColor = color;
+    fabricRef.current.renderAll();
+    pushHistory();
+    scheduleSave();
+  };
+
+  const handleSizeChange = async (newW: number, newH: number) => {
+    if (!design || !fabricRef.current || !containerRef.current) return;
+    const updated = { ...design, width_in: newW, height_in: newH };
+    setDesign(updated);
+    designRef.current = updated;
+    await supabase.from('designs').update({ width_in: newW, height_in: newH, updated_at: new Date().toISOString() }).eq('id', design.id);
+    const wPx = inchesToPixels(newW, 150);
+    const hPx = inchesToPixels(newH, 150);
+    const cw = containerRef.current.clientWidth - 64;
+    const ch = containerRef.current.clientHeight - 64;
+    const scale = Math.min(cw / wPx, ch / hPx, 1);
+    setCanvasScale(scale);
+    fabricRef.current.setZoom(scale);
+    fabricRef.current.setDimensions({ width: wPx * scale, height: hPx * scale });
+    fabricRef.current.renderAll();
+  };
+
+  const saveDesignName = async () => {
+    if (!design || !designName.trim()) return;
+    setEditingName(false);
+    if (designName === design.name) return;
+    const updated = { ...design, name: designName };
+    setDesign(updated);
+    designRef.current = updated;
+    await supabase.from('designs').update({ name: designName }).eq('id', design.id);
+  };
+
+  // ——— Export helpers ———
+
+  const withExportZoom = async <T,>(fn: (fc: Canvas) => Promise<T>): Promise<T> => {
+    const fc = fabricRef.current!;
+    const d = designRef.current!;
+    const wPx = inchesToPixels(d.width_in, 150);
+    const hPx = inchesToPixels(d.height_in, 150);
+    const prevZoom = fc.getZoom();
+    const prevW = fc.width!;
+    const prevH = fc.height!;
+    fc.setZoom(1);
+    fc.setDimensions({ width: wPx, height: hPx });
+    const result = await fn(fc);
+    fc.setZoom(prevZoom);
+    fc.setDimensions({ width: prevW, height: prevH });
+    fc.renderAll();
+    return result;
+  };
+
+  const downloadPNG = async () => {
+    if (!fabricRef.current || !designRef.current) return;
+    setShowDownloadMenu(false);
+    const dataUrl = await withExportZoom(fc => exportCanvasToImage(fc, 2));
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = `${designRef.current.name || 'design'}.png`;
+    a.click();
+  };
+
+  const downloadPDF = async () => {
+    if (!fabricRef.current || !designRef.current) return;
+    setShowDownloadMenu(false);
+    const dims = getDimensions()!;
+    const blob = await withExportZoom(fc => exportCanvasToPDF(fc, dims));
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${designRef.current.name || 'design'}.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // ——— Preflight + cart ———
 
   const handleAddToCart = async () => {
-    if (!design || !fabricCanvasRef.current) return;
-
-    runPreflight();
-
-    if (preflight && !preflight.passed) {
+    if (!design || !fabricRef.current) return;
+    const dims = getDimensions()!;
+    const result = runPreflightChecks(fabricRef.current, dims);
+    setPreflight(result);
+    if (!result.passed) {
+      setPreflightCartMode(false);
       setShowPreflight(true);
       return;
     }
-
-    await saveDesign();
-
-    if (!design.product_id) {
-      alert('This design is not linked to a product');
+    if (result.warnings.length > 0) {
+      setPreflightCartMode(true);
+      setShowPreflight(true);
       return;
     }
+    await executeAddToCart();
+  };
 
-    const variantSnapshot = design.variant_snapshot || {};
-
+  const executeAddToCart = async () => {
+    const d = designRef.current;
+    if (!d?.product_id) { alert('This design is not linked to a product.'); return; }
+    setShowPreflight(false);
+    await saveDesign();
+    const v = d.variant_snapshot || {};
     await addToCart({
-      product_id: design.product_id,
-      quantity: variantSnapshot.quantity || 1,
-      width: design.width_in,
-      height: design.height_in,
-      selected_options: variantSnapshot.selected_options || {},
-      unit_price: variantSnapshot.unit_price || 50,
-      total_price: (variantSnapshot.unit_price || 50) * (variantSnapshot.quantity || 1),
-      production_speed: variantSnapshot.production_speed || 'standard',
+      product_id: d.product_id,
+      quantity: v.quantity || 1,
+      width: d.width_in,
+      height: d.height_in,
+      selected_options: v.selected_options || {},
+      unit_price: v.unit_price || 50,
+      total_price: (v.unit_price || 50) * (v.quantity || 1),
+      production_speed: v.production_speed || 'standard',
     });
-
     navigate('/cart');
   };
+
+  const runCheck = () => {
+    const dims = getDimensions();
+    if (!dims || !fabricRef.current) return;
+    setPreflight(runPreflightChecks(fabricRef.current, dims));
+    setPreflightCartMode(false);
+    setShowPreflight(true);
+  };
+
+  // ——— Derived state ———
+
+  const isText = selectedObj?.type === 'i-text' || selectedObj?.type === 'text' || selectedObj?.type === 'textbox';
+  const isShape = selectedObj?.type === 'rect' || selectedObj?.type === 'circle' || selectedObj?.type === 'ellipse';
+  const safeZonePx = design ? design.safe_zone_in * 150 * canvasScale : 0;
 
   if (loading) {
     return (
@@ -507,40 +618,107 @@ export function DesignEditor() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-4">
+    <div className="min-h-screen bg-gray-100 flex flex-col">
+
+      {/* ── Top bar ── */}
+      <div className="bg-white border-b border-gray-200 px-4 py-2 flex items-center justify-between flex-shrink-0 gap-4">
+        <div className="flex items-center gap-3 min-w-0">
           <button
             onClick={() => navigate('/account/designs')}
-            className="text-gray-600 hover:text-gray-900"
+            className="text-gray-500 hover:text-gray-800 text-sm flex-shrink-0"
           >
             ← Back
           </button>
-          <h1 className="text-xl font-bold text-gray-900">{design?.name}</h1>
-          {saving && (
-            <span className="text-sm text-gray-500 flex items-center gap-2">
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Saving...
-            </span>
+
+          {editingName ? (
+            <input
+              ref={nameInputRef}
+              value={designName}
+              onChange={e => setDesignName(e.target.value)}
+              onBlur={saveDesignName}
+              onKeyDown={e => {
+                if (e.key === 'Enter') saveDesignName();
+                if (e.key === 'Escape') { setEditingName(false); setDesignName(design?.name || ''); }
+              }}
+              className="text-base font-bold text-gray-900 border-b-2 border-green-500 outline-none bg-transparent w-48"
+              autoFocus
+            />
+          ) : (
+            <button
+              onClick={() => { setEditingName(true); setTimeout(() => nameInputRef.current?.select(), 30); }}
+              className="flex items-center gap-1.5 text-base font-bold text-gray-900 hover:text-gray-700 group min-w-0"
+            >
+              <span className="truncate max-w-48">{design?.name}</span>
+              <Pencil className="w-3 h-3 opacity-0 group-hover:opacity-40 flex-shrink-0" />
+            </button>
           )}
-          {lastSaved && !saving && (
-            <span className="text-sm text-gray-500 flex items-center gap-2">
-              <Check className="w-4 h-4 text-green-600" />
-              Saved {lastSaved.toLocaleTimeString()}
+
+          {saving ? (
+            <span className="text-xs text-gray-400 flex items-center gap-1 flex-shrink-0">
+              <Loader2 className="w-3 h-3 animate-spin" /> Saving…
             </span>
-          )}
+          ) : lastSaved ? (
+            <span className="text-xs text-gray-400 flex items-center gap-1 flex-shrink-0">
+              <Check className="w-3 h-3 text-green-500" /> Saved
+            </span>
+          ) : null}
         </div>
-        <div className="flex items-center gap-2">
+
+        <div className="flex items-center gap-1.5 flex-shrink-0">
           <button
-            onClick={runPreflight}
-            className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2"
+            onClick={undoHistory}
+            disabled={!canUndo}
+            title="Undo (Ctrl+Z)"
+            className="p-2 rounded hover:bg-gray-100 disabled:opacity-30 transition-colors"
           >
-            <AlertTriangle className="w-4 h-4" />
-            Check Design
+            <Undo2 className="w-4 h-4" />
           </button>
           <button
+            onClick={redoHistory}
+            disabled={!canRedo}
+            title="Redo (Ctrl+Y)"
+            className="p-2 rounded hover:bg-gray-100 disabled:opacity-30 transition-colors"
+          >
+            <Redo2 className="w-4 h-4" />
+          </button>
+
+          <div className="w-px h-5 bg-gray-200 mx-1" />
+
+          <button
+            onClick={() => setShowSafeZone(v => !v)}
+            title={showSafeZone ? 'Hide safe zone' : 'Show safe zone'}
+            className={`p-2 rounded transition-colors ${showSafeZone ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-100 text-gray-500'}`}
+          >
+            {showSafeZone ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+          </button>
+
+          <div className="relative">
+            <button
+              onClick={e => { e.stopPropagation(); setShowDownloadMenu(v => !v); }}
+              className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm transition-colors"
+            >
+              <Download className="w-4 h-4" />
+              Download
+            </button>
+            {showDownloadMenu && (
+              <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 py-1 min-w-[140px]">
+                <button onClick={downloadPNG} className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50">PNG (High-res)</button>
+                <button onClick={downloadPDF} className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50">PDF (Print-ready)</button>
+              </div>
+            )}
+          </div>
+
+          <button
+            onClick={runCheck}
+            className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm transition-colors"
+          >
+            <AlertTriangle className="w-4 h-4" />
+            Check
+          </button>
+
+          <button
             onClick={handleAddToCart}
-            className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
+            className="flex items-center gap-1.5 px-4 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium transition-colors"
           >
             <ShoppingCart className="w-4 h-4" />
             Add to Cart
@@ -548,249 +726,414 @@ export function DesignEditor() {
         </div>
       </div>
 
-      <div className="flex h-[calc(100vh-60px)]">
-        <div className="w-64 bg-white border-r border-gray-200 p-4 space-y-2 overflow-y-auto">
-          <h3 className="font-semibold text-gray-900 mb-4">Tools</h3>
+      <div className="flex flex-1 overflow-hidden">
 
-          <button
-            onClick={addText}
-            className="w-full flex items-center gap-3 px-4 py-3 border border-gray-200 rounded-lg hover:bg-gray-50"
-          >
-            <Type className="w-5 h-5 text-gray-600" />
-            <span>Add Text</span>
-          </button>
+        {/* ── Left panel ── */}
+        <div className="w-64 bg-white border-r border-gray-200 flex flex-col overflow-y-auto flex-shrink-0">
 
-          <label className="w-full flex items-center gap-3 px-4 py-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-            <ImageIcon className="w-5 h-5 text-gray-600" />
-            <span>Add Image</span>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleImageUpload}
-              className="hidden"
-            />
-          </label>
+          {/* Add elements */}
+          <div className="p-3 border-b border-gray-100">
+            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Add Elements</p>
+            <div className="grid grid-cols-2 gap-1.5">
+              <button
+                onClick={addText}
+                className="flex flex-col items-center gap-1 py-3 px-2 border border-gray-200 rounded-lg hover:bg-green-50 hover:border-green-300 text-xs text-gray-700 transition-colors"
+              >
+                <Type className="w-5 h-5 text-gray-500" />
+                Text
+              </button>
+              <label className="flex flex-col items-center gap-1 py-3 px-2 border border-gray-200 rounded-lg hover:bg-green-50 hover:border-green-300 text-xs text-gray-700 cursor-pointer transition-colors">
+                <ImageIcon className="w-5 h-5 text-gray-500" />
+                Image
+                <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+              </label>
+              <button
+                onClick={addRectangle}
+                className="flex flex-col items-center gap-1 py-3 px-2 border border-gray-200 rounded-lg hover:bg-green-50 hover:border-green-300 text-xs text-gray-700 transition-colors"
+              >
+                <Square className="w-5 h-5 text-gray-500" />
+                Rectangle
+              </button>
+              <button
+                onClick={addCircle}
+                className="flex flex-col items-center gap-1 py-3 px-2 border border-gray-200 rounded-lg hover:bg-green-50 hover:border-green-300 text-xs text-gray-700 transition-colors"
+              >
+                <LucideCircle className="w-5 h-5 text-gray-500" />
+                Circle
+              </button>
+            </div>
+          </div>
 
-          <button
-            onClick={addRectangle}
-            className="w-full flex items-center gap-3 px-4 py-3 border border-gray-200 rounded-lg hover:bg-gray-50"
-          >
-            <Square className="w-5 h-5 text-gray-600" />
-            <span>Add Rectangle</span>
-          </button>
+          {/* Background color */}
+          <div className="p-3 border-b border-gray-100">
+            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Background</p>
+            <div className="flex items-center gap-2">
+              <input
+                type="color"
+                value={bgColor}
+                onChange={e => changeBgColor(e.target.value)}
+                className="w-9 h-8 rounded cursor-pointer border border-gray-300 flex-shrink-0"
+              />
+              <input
+                type="text"
+                value={bgColor}
+                onChange={e => changeBgColor(e.target.value)}
+                className="flex-1 min-w-0 px-2 py-1.5 border border-gray-200 rounded text-xs font-mono"
+              />
+            </div>
+          </div>
 
-          {selectedObject && selectedObject.type === 'i-text' && (
-            <div className="pt-4 border-t border-gray-200 space-y-3">
-              <h4 className="font-semibold text-gray-900 mb-2 text-sm">Text Properties</h4>
+          {/* ── Context-sensitive object properties ── */}
+          {selectedObj && (
+            <div className="p-3 border-b border-gray-100 space-y-3">
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Properties</p>
 
+              {/* Text properties */}
+              {isText && (
+                <>
+                  <div>
+                    <label className="text-xs text-gray-600 mb-1 block">Font Family</label>
+                    <select
+                      value={sel.fontFamily}
+                      onChange={e => {
+                        const f = e.target.value;
+                        document.fonts.load(`16px "${f}"`).then(() => applyProp({ fontFamily: f }));
+                      }}
+                      className="w-full px-2 py-1.5 border border-gray-200 rounded text-xs focus:ring-1 focus:ring-green-500"
+                    >
+                      {AVAILABLE_FONTS.map(f => (
+                        <option key={f} value={f} style={{ fontFamily: f }}>{f}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <div className="flex-1 min-w-0">
+                      <label className="text-xs text-gray-600 mb-1 block">Size (pt)</label>
+                      <input
+                        type="number"
+                        min={6}
+                        max={500}
+                        value={sel.fontSize}
+                        onChange={e => applyProp({ fontSize: parseInt(e.target.value) || 36 })}
+                        className="w-full px-2 py-1.5 border border-gray-200 rounded text-xs focus:ring-1 focus:ring-green-500"
+                      />
+                    </div>
+                    <div className="flex items-end gap-1 pb-0.5">
+                      <button
+                        onClick={() => applyProp({ fontWeight: sel.fontWeight === 'bold' ? 'normal' : 'bold' })}
+                        title="Bold"
+                        className={`p-1.5 rounded border text-xs transition-colors ${sel.fontWeight === 'bold' ? 'bg-gray-800 text-white border-gray-800' : 'border-gray-200 hover:bg-gray-50'}`}
+                      >
+                        <Bold className="w-3 h-3" />
+                      </button>
+                      <button
+                        onClick={() => applyProp({ fontStyle: sel.fontStyle === 'italic' ? 'normal' : 'italic' })}
+                        title="Italic"
+                        className={`p-1.5 rounded border text-xs transition-colors ${sel.fontStyle === 'italic' ? 'bg-gray-800 text-white border-gray-800' : 'border-gray-200 hover:bg-gray-50'}`}
+                      >
+                        <Italic className="w-3 h-3" />
+                      </button>
+                      <button
+                        onClick={() => applyProp({ underline: !sel.underline })}
+                        title="Underline"
+                        className={`p-1.5 rounded border text-xs transition-colors ${sel.underline ? 'bg-gray-800 text-white border-gray-800' : 'border-gray-200 hover:bg-gray-50'}`}
+                      >
+                        <Underline className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-xs text-gray-600 mb-1 block">Text Color</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="color"
+                        value={sel.fill || '#000000'}
+                        onChange={e => applyProp({ fill: e.target.value })}
+                        className="w-9 h-8 rounded cursor-pointer border border-gray-300 flex-shrink-0"
+                      />
+                      <input
+                        type="text"
+                        value={sel.fill}
+                        onChange={e => applyProp({ fill: e.target.value })}
+                        className="flex-1 min-w-0 px-2 py-1.5 border border-gray-200 rounded text-xs font-mono"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Shape properties */}
+              {isShape && (
+                <>
+                  <div>
+                    <label className="text-xs text-gray-600 mb-1 block">Fill Color</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="color"
+                        value={sel.fill || '#3B82F6'}
+                        onChange={e => applyProp({ fill: e.target.value })}
+                        className="w-9 h-8 rounded cursor-pointer border border-gray-300 flex-shrink-0"
+                      />
+                      <input
+                        type="text"
+                        value={sel.fill}
+                        onChange={e => applyProp({ fill: e.target.value })}
+                        className="flex-1 min-w-0 px-2 py-1.5 border border-gray-200 rounded text-xs font-mono"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-600 mb-1 block">
+                      Stroke — <span className="font-normal">width</span>
+                      <input
+                        type="number"
+                        min={0}
+                        max={30}
+                        value={sel.strokeWidth}
+                        onChange={e => applyProp({ strokeWidth: parseInt(e.target.value) || 0 })}
+                        className="ml-1 w-12 px-1.5 py-0.5 border border-gray-200 rounded text-xs inline-block"
+                      />
+                      px
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="color"
+                        value={sel.stroke || '#000000'}
+                        onChange={e => applyProp({ stroke: e.target.value, strokeWidth: sel.strokeWidth || 2 })}
+                        className="w-9 h-8 rounded cursor-pointer border border-gray-300 flex-shrink-0"
+                      />
+                      <input
+                        type="text"
+                        value={sel.stroke}
+                        onChange={e => applyProp({ stroke: e.target.value })}
+                        className="flex-1 min-w-0 px-2 py-1.5 border border-gray-200 rounded text-xs font-mono"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Opacity — all types */}
               <div>
-                <label className="block text-sm text-gray-700 mb-1">Font Family</label>
-                <select
-                  value={currentFont}
-                  onChange={(e) => handleFontChange(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                >
-                  {AVAILABLE_FONTS.map((font) => (
-                    <option key={font} value={font} style={{ fontFamily: font }}>
-                      {font}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm text-gray-700 mb-1">Text Color</label>
-                <input
-                  type="text"
-                  value={currentColor}
-                  onChange={(e) => handleColorChange(e.target.value)}
-                  placeholder="#000000"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm font-mono mb-2"
-                />
-                <label className="block w-full">
-                  <span className="text-xs text-gray-600 mb-1 block">Choose Color:</span>
-                  <input
-                    type="color"
-                    value={currentColor}
-                    onChange={(e) => handleColorChange(e.target.value)}
-                    className="w-full h-10 rounded border border-gray-300 cursor-pointer"
-                  />
+                <label className="text-xs text-gray-600 mb-1 flex justify-between">
+                  <span>Opacity</span>
+                  <span className="font-mono">{Math.round(sel.opacity * 100)}%</span>
                 </label>
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  value={sel.opacity}
+                  onChange={e => applyProp({ opacity: parseFloat(e.target.value) })}
+                  className="w-full accent-green-600"
+                />
               </div>
             </div>
           )}
 
-          {selectedObject && (
-            <div className="pt-4 border-t border-gray-200 space-y-2">
-              <h4 className="font-semibold text-gray-900 mb-2 text-sm">Layer Controls</h4>
-
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  onClick={bringToFront}
-                  className="flex items-center justify-center gap-2 px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm"
-                  title="Bring to Front"
-                >
-                  <ChevronsUp className="w-4 h-4" />
-                  <span>Front</span>
+          {/* Alignment tools */}
+          {selectedObj && (
+            <div className="p-3 border-b border-gray-100">
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Align on Canvas</p>
+              <div className="grid grid-cols-3 gap-1">
+                <button onClick={() => alignObject('left')} title="Align Left" className="p-2 border border-gray-200 rounded hover:bg-gray-50 transition-colors">
+                  <AlignLeft className="w-3.5 h-3.5 mx-auto text-gray-600" />
                 </button>
-
-                <button
-                  onClick={sendToBack}
-                  className="flex items-center justify-center gap-2 px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm"
-                  title="Send to Back"
-                >
-                  <ChevronsDown className="w-4 h-4" />
-                  <span>Back</span>
+                <button onClick={() => alignObject('centerH')} title="Center Horizontal" className="p-2 border border-gray-200 rounded hover:bg-gray-50 transition-colors">
+                  <AlignCenter className="w-3.5 h-3.5 mx-auto text-gray-600" />
                 </button>
-
-                <button
-                  onClick={bringForward}
-                  className="flex items-center justify-center gap-2 px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm"
-                  title="Bring Forward"
-                >
-                  <ArrowUp className="w-4 h-4" />
-                  <span>Forward</span>
+                <button onClick={() => alignObject('right')} title="Align Right" className="p-2 border border-gray-200 rounded hover:bg-gray-50 transition-colors">
+                  <AlignRight className="w-3.5 h-3.5 mx-auto text-gray-600" />
                 </button>
-
-                <button
-                  onClick={sendBackward}
-                  className="flex items-center justify-center gap-2 px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm"
-                  title="Send Backward"
-                >
-                  <ArrowDown className="w-4 h-4" />
-                  <span>Backward</span>
+                <button onClick={() => alignObject('top')} title="Align Top" className="p-2 border border-gray-200 rounded hover:bg-gray-50 transition-colors">
+                  <span className="block text-center text-[10px] text-gray-600 font-medium">Top</span>
+                </button>
+                <button onClick={() => alignObject('centerV')} title="Center Vertical" className="p-2 border border-gray-200 rounded hover:bg-gray-50 transition-colors">
+                  <span className="block text-center text-[10px] text-gray-600 font-medium">Mid</span>
+                </button>
+                <button onClick={() => alignObject('bottom')} title="Align Bottom" className="p-2 border border-gray-200 rounded hover:bg-gray-50 transition-colors">
+                  <span className="block text-center text-[10px] text-gray-600 font-medium">Bot</span>
                 </button>
               </div>
+            </div>
+          )}
 
+          {/* Layer controls */}
+          {selectedObj && (
+            <div className="p-3 border-b border-gray-100">
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Layers</p>
+              <div className="grid grid-cols-2 gap-1 mb-2">
+                <button
+                  onClick={() => { fabricRef.current?.bringObjectToFront(selectedObj); fabricRef.current?.renderAll(); pushHistory(); scheduleSave(); }}
+                  className="flex items-center justify-center gap-1 p-2 border border-gray-200 rounded hover:bg-gray-50 text-xs text-gray-700 transition-colors"
+                >
+                  <ChevronsUp className="w-3.5 h-3.5" /> Front
+                </button>
+                <button
+                  onClick={() => { fabricRef.current?.sendObjectToBack(selectedObj); fabricRef.current?.renderAll(); pushHistory(); scheduleSave(); }}
+                  className="flex items-center justify-center gap-1 p-2 border border-gray-200 rounded hover:bg-gray-50 text-xs text-gray-700 transition-colors"
+                >
+                  <ChevronsDown className="w-3.5 h-3.5" /> Back
+                </button>
+                <button
+                  onClick={() => { fabricRef.current?.bringObjectForward(selectedObj); fabricRef.current?.renderAll(); pushHistory(); scheduleSave(); }}
+                  className="flex items-center justify-center gap-1 p-2 border border-gray-200 rounded hover:bg-gray-50 text-xs text-gray-700 transition-colors"
+                >
+                  <ArrowUp className="w-3.5 h-3.5" /> Fwd
+                </button>
+                <button
+                  onClick={() => { fabricRef.current?.sendObjectBackwards(selectedObj); fabricRef.current?.renderAll(); pushHistory(); scheduleSave(); }}
+                  className="flex items-center justify-center gap-1 p-2 border border-gray-200 rounded hover:bg-gray-50 text-xs text-gray-700 transition-colors"
+                >
+                  <ArrowDown className="w-3.5 h-3.5" /> Bwd
+                </button>
+              </div>
               <button
-                onClick={deleteSelectedObject}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-50 text-red-600 border border-red-200 rounded-lg hover:bg-red-100"
+                onClick={deleteSelected}
+                className="w-full flex items-center justify-center gap-2 py-2 bg-red-50 text-red-600 border border-red-200 rounded hover:bg-red-100 text-xs transition-colors"
               >
-                <Trash2 className="w-4 h-4" />
-                <span>Delete (Del/Backspace)</span>
+                <Trash2 className="w-3.5 h-3.5" /> Delete (Del)
               </button>
             </div>
           )}
 
-          <div className="pt-4 border-t border-gray-200 space-y-4">
-            <div>
-              <h4 className="font-semibold text-gray-900 mb-3 text-sm">Select Size</h4>
-              {product?.size_preset_category ? (
-                <SizeSelector
-                  categorySlug={product.size_preset_category}
-                  selectedWidth={design?.width_in}
-                  selectedHeight={design?.height_in}
-                  onSizeChange={handleSizeChange}
-                  allowCustomSize={true}
-                  showLegibilityGuide={false}
-                />
-              ) : (
-                <div className="space-y-3">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">
-                        Width (inches)
-                      </label>
-                      <input
-                        type="number"
-                        step="0.1"
-                        min="0.1"
-                        value={design?.width_in || ''}
-                        onChange={(e) => {
-                          const val = parseFloat(e.target.value);
-                          if (!isNaN(val) && val > 0 && design) {
-                            handleSizeChange(val, design.height_in);
-                          }
-                        }}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">
-                        Height (inches)
-                      </label>
-                      <input
-                        type="number"
-                        step="0.1"
-                        min="0.1"
-                        value={design?.height_in || ''}
-                        onChange={(e) => {
-                          const val = parseFloat(e.target.value);
-                          if (!isNaN(val) && val > 0 && design) {
-                            handleSizeChange(design.width_in, val);
-                          }
-                        }}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
-                      />
-                    </div>
-                  </div>
+          {/* Print size selector */}
+          <div className="p-3">
+            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Print Size</p>
+            {product?.size_preset_category ? (
+              <SizeSelector
+                categorySlug={product.size_preset_category}
+                selectedWidth={design?.width_in}
+                selectedHeight={design?.height_in}
+                onSizeChange={handleSizeChange}
+                allowCustomSize
+                showLegibilityGuide={false}
+              />
+            ) : (
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-xs text-gray-600 mb-1 block">W (in)</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="0.1"
+                    value={design?.width_in || ''}
+                    onChange={e => { const v = parseFloat(e.target.value); if (!isNaN(v) && v > 0 && design) handleSizeChange(v, design.height_in); }}
+                    className="w-full px-2 py-1.5 border border-gray-200 rounded text-xs focus:ring-1 focus:ring-green-500"
+                  />
                 </div>
-              )}
-            </div>
-            <div className="pt-3 border-t border-gray-200">
-              <p className="text-xs text-gray-500 mb-1">Print Specifications</p>
-              <p className="text-xs text-gray-600">
-                Bleed: {design?.bleed_in}" | Safe Zone: {design?.safe_zone_in}"
-              </p>
-            </div>
+                <div>
+                  <label className="text-xs text-gray-600 mb-1 block">H (in)</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="0.1"
+                    value={design?.height_in || ''}
+                    onChange={e => { const v = parseFloat(e.target.value); if (!isNaN(v) && v > 0 && design) handleSizeChange(design.width_in, v); }}
+                    className="w-full px-2 py-1.5 border border-gray-200 rounded text-xs focus:ring-1 focus:ring-green-500"
+                  />
+                </div>
+              </div>
+            )}
+            <p className="mt-2 text-[10px] text-gray-400">
+              Bleed: {design?.bleed_in}" · Safe zone: {design?.safe_zone_in}"
+            </p>
           </div>
         </div>
 
-        <div ref={containerRef} className="flex-1 p-8 flex items-center justify-center overflow-hidden">
-          <div className="bg-white p-4 rounded-lg shadow-lg">
-            <canvas ref={canvasRef} />
+        {/* ── Canvas area ── */}
+        <div ref={containerRef} className="flex-1 p-8 flex items-center justify-center overflow-hidden relative">
+          <div className="bg-white p-4 rounded-lg shadow-xl">
+            <div className="relative" style={{ display: 'inline-block' }}>
+              <canvas ref={canvasRef} className="block" />
+              {showSafeZone && design && safeZonePx > 0 && (
+                <div className="absolute inset-0 pointer-events-none select-none">
+                  <div
+                    className="absolute border-2 border-dashed border-blue-400/50 rounded-sm"
+                    style={{ inset: `${safeZonePx}px` }}
+                  />
+                  <span
+                    className="absolute text-[9px] leading-3 text-blue-400/70 bg-white/70 px-0.5 rounded"
+                    style={{ top: safeZonePx + 3, left: safeZonePx + 3 }}
+                  >
+                    Safe Zone
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Hint bar */}
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-xs text-gray-400 bg-white/80 px-3 py-1 rounded-full shadow-sm pointer-events-none">
+            Click to select · Double-click text to edit · Del to delete · Ctrl+Z undo · Ctrl+C/V copy/paste
           </div>
         </div>
       </div>
 
+      {/* ── Preflight modal ── */}
       {showPreflight && preflight && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 max-w-lg w-full max-h-[80vh] overflow-y-auto">
-            <h2 className="text-2xl font-bold mb-4">
-              {preflight.passed ? 'Design Check Passed' : 'Design Check Issues'}
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 max-w-md w-full max-h-[80vh] overflow-y-auto shadow-2xl">
+            <h2 className="text-xl font-bold mb-4 text-gray-900">
+              {preflight.passed && preflight.warnings.length === 0
+                ? '✓ Design Check Passed'
+                : preflight.blockers.length > 0
+                ? '✗ Issues Found'
+                : '⚠ Warnings'}
             </h2>
 
             {preflight.blockers.length > 0 && (
-              <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-                <h3 className="font-semibold text-red-900 mb-2">Blockers</h3>
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="font-semibold text-red-800 text-sm mb-2">Must fix before printing:</p>
                 <ul className="space-y-1">
-                  {preflight.blockers.map((msg, i) => (
-                    <li key={i} className="text-sm text-red-700">• {msg}</li>
+                  {preflight.blockers.map((m, i) => (
+                    <li key={i} className="text-sm text-red-700">• {m}</li>
                   ))}
                 </ul>
               </div>
             )}
 
             {preflight.warnings.length > 0 && (
-              <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <h3 className="font-semibold text-yellow-900 mb-2">Warnings</h3>
+              <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <p className="font-semibold text-yellow-800 text-sm mb-2">Warnings:</p>
                 <ul className="space-y-1">
-                  {preflight.warnings.map((msg, i) => (
-                    <li key={i} className="text-sm text-yellow-700">• {msg}</li>
+                  {preflight.warnings.map((m, i) => (
+                    <li key={i} className="text-sm text-yellow-700">• {m}</li>
                   ))}
                 </ul>
               </div>
             )}
 
-            {preflight.passed && (
-              <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-                <p className="text-green-900">Your design looks great and is ready to print!</p>
+            {preflight.passed && preflight.warnings.length === 0 && (
+              <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                <p className="text-green-800 text-sm">Your design looks great and is print-ready!</p>
               </div>
             )}
 
             <div className="flex gap-2">
               <button
                 onClick={() => setShowPreflight(false)}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm transition-colors"
               >
-                {preflight.passed ? 'Close' : 'Fix Issues'}
+                {preflight.blockers.length > 0 ? 'Fix Issues' : 'Back to Editing'}
               </button>
-              {preflight.passed && (
+              {preflightCartMode && preflight.blockers.length === 0 && (
                 <button
-                  onClick={handleAddToCart}
-                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                  onClick={executeAddToCart}
+                  className="flex-1 px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 text-sm transition-colors"
                 >
-                  Continue to Cart
+                  Add to Cart Anyway
+                </button>
+              )}
+              {!preflightCartMode && preflight.passed && (
+                <button
+                  onClick={executeAddToCart}
+                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm transition-colors"
+                >
+                  Add to Cart
                 </button>
               )}
             </div>
