@@ -1,25 +1,39 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Canvas, IText, Rect, Circle as FabricCircle, Image as FabricImage, Object as FabricObject } from 'fabric';
+import {
+  Canvas,
+  Textbox,
+  Rect,
+  Circle as FabricCircle,
+  Triangle,
+  Polygon,
+  Image as FabricImage,
+  Object as FabricObject,
+  filters,
+} from 'fabric';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useCart } from '../contexts/CartContext';
-import { Design, PreflightCheck, Product } from '../types';
+import { Design, PreflightCheck, Product, Template } from '../types';
 import {
   exportCanvasToImage,
   exportCanvasToPDF,
   runPreflightChecks,
   inchesToPixels,
+  generateProofToken,
   CanvasDimensions,
 } from '../lib/designStudio';
 import {
   Loader2, Check, AlertTriangle, ShoppingCart,
   Type, Image as ImageIcon, Square, Circle as LucideCircle,
-  Undo2, Redo2, Download, Trash2, Pencil,
+  Triangle as TriangleIcon, Star,
+  Undo2, Redo2, Download, Trash2, Pencil, Copy as CopyIcon,
   ChevronsUp, ChevronsDown, ArrowUp, ArrowDown,
-  AlignLeft, AlignCenter, AlignRight,
+  AlignLeft, AlignCenter, AlignRight, AlignJustify,
   Bold, Italic, Underline,
-  Eye, EyeOff,
+  Eye, EyeOff, Lock, Unlock,
+  FlipHorizontal, FlipVertical,
+  Layers, Share2, Plus, Minus, Maximize2, X,
 } from 'lucide-react';
 import SizeSelector from '../components/SizeSelector';
 
@@ -36,10 +50,16 @@ type SelState = {
   fontWeight: string;
   fontStyle: string;
   underline: boolean;
+  textAlign: string;
   fill: string;
   stroke: string;
   strokeWidth: number;
   opacity: number;
+  flipX: boolean;
+  flipY: boolean;
+  rx: number;
+  brightness: number;
+  contrast: number;
 };
 
 const DEFAULT_SEL: SelState = {
@@ -49,14 +69,28 @@ const DEFAULT_SEL: SelState = {
   fontWeight: 'normal',
   fontStyle: 'normal',
   underline: false,
+  textAlign: 'left',
   fill: '#000000',
   stroke: '',
   strokeWidth: 0,
   opacity: 1,
+  flipX: false,
+  flipY: false,
+  rx: 0,
+  brightness: 0,
+  contrast: 0,
 };
 
 function syncSelFromObj(obj: FabricObject): SelState {
   const o = obj as any;
+  let brightness = 0;
+  let contrast = 0;
+  if (obj.type === 'image' && Array.isArray(o.filters)) {
+    for (const f of o.filters) {
+      if (f instanceof filters.Brightness) brightness = (f as any).brightness || 0;
+      if (f instanceof filters.Contrast) contrast = (f as any).contrast || 0;
+    }
+  }
   return {
     type: obj.type || '',
     fontFamily: o.fontFamily || 'Arial',
@@ -64,11 +98,65 @@ function syncSelFromObj(obj: FabricObject): SelState {
     fontWeight: o.fontWeight || 'normal',
     fontStyle: o.fontStyle || 'normal',
     underline: !!o.underline,
+    textAlign: o.textAlign || 'left',
     fill: typeof o.fill === 'string' ? o.fill : '#000000',
     stroke: o.stroke || '',
     strokeWidth: o.strokeWidth || 0,
     opacity: typeof o.opacity === 'number' ? o.opacity : 1,
+    flipX: !!o.flipX,
+    flipY: !!o.flipY,
+    rx: o.rx || 0,
+    brightness,
+    contrast,
   };
+}
+
+function starPoints(spikes = 5, outerR = 60, innerR = 28) {
+  const points: { x: number; y: number }[] = [];
+  const step = Math.PI / spikes;
+  for (let i = 0; i < 2 * spikes; i++) {
+    const r = i % 2 === 0 ? outerR : innerR;
+    const angle = i * step - Math.PI / 2;
+    points.push({ x: outerR + r * Math.cos(angle), y: outerR + r * Math.sin(angle) });
+  }
+  return points;
+}
+
+function getObjectLabel(obj: FabricObject): string {
+  const o = obj as any;
+  if (obj.type === 'textbox' || obj.type === 'i-text' || obj.type === 'text') {
+    const text = (o.text || '').replace(/\s+/g, ' ').trim();
+    return text.length > 22 ? text.slice(0, 22) + '…' : text || 'Text';
+  }
+  if (obj.type === 'image') return 'Image';
+  if (obj.type === 'rect') return 'Rectangle';
+  if (obj.type === 'circle') return 'Circle';
+  if (obj.type === 'triangle') return 'Triangle';
+  if (obj.type === 'polygon') return 'Star';
+  return obj.type || 'Object';
+}
+
+function getObjectIcon(type: string) {
+  switch (type) {
+    case 'textbox': case 'i-text': case 'text': return Type;
+    case 'image': return ImageIcon;
+    case 'rect': return Square;
+    case 'circle': return LucideCircle;
+    case 'triangle': return TriangleIcon;
+    case 'polygon': return Star;
+    default: return Square;
+  }
+}
+
+function computeImageDPI(obj: FabricObject): number | null {
+  if (obj.type !== 'image') return null;
+  const o = obj as any;
+  const scaleX = obj.scaleX || 1;
+  const scaleY = obj.scaleY || 1;
+  if (!o.width || !o.height) return null;
+  const dpiX = 150 / scaleX;
+  const dpiY = 150 / scaleY;
+  return Math.min(dpiX, dpiY);
 }
 
 export function DesignEditor() {
@@ -77,6 +165,7 @@ export function DesignEditor() {
   const { addToCart } = useCart();
   const navigate = useNavigate();
 
+  // ── State ──
   const [design, setDesign] = useState<Design | null>(null);
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
@@ -87,15 +176,24 @@ export function DesignEditor() {
   const [preflightCartMode, setPreflightCartMode] = useState(false);
   const [selectedObj, setSelectedObj] = useState<FabricObject | null>(null);
   const [sel, setSel] = useState<SelState>(DEFAULT_SEL);
-  const [canvasScale, setCanvasScale] = useState(1);
+  const [autoScale, setAutoScale] = useState(1);
+  const [userZoom, setUserZoom] = useState(1);
   const [bgColor, setBgColor] = useState('#ffffff');
   const [showSafeZone, setShowSafeZone] = useState(true);
+  const [showLayers, setShowLayers] = useState(true);
   const [editingName, setEditingName] = useState(false);
   const [designName, setDesignName] = useState('');
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
   const [showDownloadMenu, setShowDownloadMenu] = useState(false);
+  const [layersVersion, setLayersVersion] = useState(0);
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [showTemplatePicker, setShowTemplatePicker] = useState(false);
+  const [proofUrl, setProofUrl] = useState('');
+  const [showProofModal, setShowProofModal] = useState(false);
+  const [proofLoading, setProofLoading] = useState(false);
 
+  // ── Refs ──
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fabricRef = useRef<Canvas | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -107,7 +205,8 @@ export function DesignEditor() {
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
 
-  // keep designRef in sync so event-handler closures never go stale
+  const effectiveScale = autoScale * userZoom;
+
   useEffect(() => {
     designRef.current = design;
     if (design && !designName) setDesignName(design.name);
@@ -116,6 +215,7 @@ export function DesignEditor() {
   useEffect(() => {
     if (!user) { navigate('/login'); return; }
     loadDesign();
+    loadTemplates();
   }, [designId, user]);
 
   useEffect(() => {
@@ -136,7 +236,6 @@ export function DesignEditor() {
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  // keyboard shortcuts — all use refs so empty-dep closure is fine
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement).tagName;
@@ -146,6 +245,10 @@ export function DesignEditor() {
       if (ctrl && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) { e.preventDefault(); redoHistory(); return; }
       if (ctrl && e.key === 'c') { e.preventDefault(); copySelected(); return; }
       if (ctrl && e.key === 'v') { e.preventDefault(); pasteClipboard(); return; }
+      if (ctrl && e.key === 'd') { e.preventDefault(); copySelected(); pasteClipboard(); return; }
+      if (ctrl && (e.key === '=' || e.key === '+')) { e.preventDefault(); zoomIn(); return; }
+      if (ctrl && e.key === '-') { e.preventDefault(); zoomOut(); return; }
+      if (ctrl && e.key === '0') { e.preventDefault(); zoomFit(); return; }
       if ((e.key === 'Delete' || e.key === 'Backspace') && fabricRef.current?.getActiveObject()) {
         e.preventDefault(); deleteSelected();
       }
@@ -154,7 +257,6 @@ export function DesignEditor() {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  // close download menu on outside click
   useEffect(() => {
     if (!showDownloadMenu) return;
     const close = () => setShowDownloadMenu(false);
@@ -162,7 +264,7 @@ export function DesignEditor() {
     return () => document.removeEventListener('click', close);
   }, [showDownloadMenu]);
 
-  // ——— Data loading ———
+  // ── Data ──
 
   const loadDesign = async () => {
     const { data, error } = await supabase.from('designs').select('*').eq('id', designId).maybeSingle();
@@ -173,16 +275,33 @@ export function DesignEditor() {
       const { data: prod } = await supabase.from('products').select('*').eq('id', data.product_id).maybeSingle();
       if (prod) setProduct(prod);
     }
+    // Show template picker if the design is empty
+    const ed = data.editor_json;
+    const parsed = typeof ed === 'string' ? (() => { try { return JSON.parse(ed); } catch { return null; } })() : ed;
+    if (!parsed?.objects?.length) {
+      setShowTemplatePicker(true);
+    }
     setLoading(false);
   };
 
-  // ——— Canvas helpers ———
+  const loadTemplates = async () => {
+    const { data } = await supabase
+      .from('templates')
+      .select('*')
+      .eq('is_published', true)
+      .order('usage_count', { ascending: false });
+    setTemplates(data || []);
+  };
+
+  // ── Canvas ──
 
   const getDimensions = (): CanvasDimensions | null => {
     const d = designRef.current;
     if (!d) return null;
     return { widthIn: d.width_in, heightIn: d.height_in, bleedIn: d.bleed_in, safeZoneIn: d.safe_zone_in };
   };
+
+  const bumpLayers = () => setLayersVersion(v => v + 1);
 
   const recalcScale = () => {
     if (!containerRef.current || !designRef.current || !fabricRef.current) return;
@@ -191,12 +310,29 @@ export function DesignEditor() {
     const hPx = inchesToPixels(d.height_in, 150);
     const cw = containerRef.current.clientWidth - 64;
     const ch = containerRef.current.clientHeight - 64;
-    const scale = Math.min(cw / wPx, ch / hPx, 1);
-    setCanvasScale(scale);
-    fabricRef.current.setZoom(scale);
-    fabricRef.current.setDimensions({ width: wPx * scale, height: hPx * scale });
+    const fit = Math.min(cw / wPx, ch / hPx, 1);
+    setAutoScale(fit);
+    const finalScale = fit * userZoom;
+    fabricRef.current.setZoom(finalScale);
+    fabricRef.current.setDimensions({ width: wPx * finalScale, height: hPx * finalScale });
     fabricRef.current.renderAll();
   };
+
+  const applyZoom = (newUserZoom: number) => {
+    if (!fabricRef.current || !designRef.current) return;
+    setUserZoom(newUserZoom);
+    const d = designRef.current;
+    const wPx = inchesToPixels(d.width_in, 150);
+    const hPx = inchesToPixels(d.height_in, 150);
+    const finalScale = autoScale * newUserZoom;
+    fabricRef.current.setZoom(finalScale);
+    fabricRef.current.setDimensions({ width: wPx * finalScale, height: hPx * finalScale });
+    fabricRef.current.renderAll();
+  };
+
+  const zoomIn  = () => applyZoom(Math.min(userZoom * 1.25, 4));
+  const zoomOut = () => applyZoom(Math.max(userZoom / 1.25, 0.25));
+  const zoomFit = () => applyZoom(1);
 
   const initCanvas = async () => {
     if (!canvasRef.current || !design || !containerRef.current) return;
@@ -207,7 +343,7 @@ export function DesignEditor() {
     const cw = containerRef.current.clientWidth - 64;
     const ch = containerRef.current.clientHeight - 64;
     const scale = Math.min(cw / wPx, ch / hPx, 1);
-    setCanvasScale(scale);
+    setAutoScale(scale);
 
     const fc = new Canvas(canvasRef.current, {
       width: wPx * scale,
@@ -226,10 +362,8 @@ export function DesignEditor() {
       });
     }
 
-    // sync bg state from loaded JSON
     if (typeof fc.backgroundColor === 'string') setBgColor(fc.backgroundColor);
 
-    // bootstrap history
     historyRef.current = [JSON.stringify(fc.toJSON())];
     historyIdxRef.current = 0;
 
@@ -246,9 +380,10 @@ export function DesignEditor() {
     fc.on('selection:cleared', () => updateSel());
 
     fabricRef.current = fc;
+    bumpLayers();
   };
 
-  // ——— Auto-save + history ———
+  // ── History + Save ──
 
   const scheduleSave = () => {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
@@ -259,6 +394,7 @@ export function DesignEditor() {
     if (isRestoringRef.current) return;
     pushHistory();
     scheduleSave();
+    bumpLayers();
   };
 
   const pushHistory = () => {
@@ -291,6 +427,7 @@ export function DesignEditor() {
     }
     setSelectedObj(null);
     setSel(DEFAULT_SEL);
+    bumpLayers();
   };
 
   const undoHistory = async () => {
@@ -346,7 +483,7 @@ export function DesignEditor() {
     }
   };
 
-  // ——— Object manipulation ———
+  // ── Object manipulation ──
 
   const applyProp = (props: Record<string, unknown>) => {
     const obj = fabricRef.current?.getActiveObject();
@@ -358,20 +495,22 @@ export function DesignEditor() {
     scheduleSave();
   };
 
-  const addText = () => {
+  const addTextbox = () => {
     if (!fabricRef.current || !designRef.current) return;
     const d = designRef.current;
     const wPx = inchesToPixels(d.width_in, 150);
     const hPx = inchesToPixels(d.height_in, 150);
-    const text = new IText('Your Text Here', {
+    const tb = new Textbox('Your Text Here', {
       left: wPx * 0.1,
       top: hPx * 0.4,
+      width: wPx * 0.8,
       fontSize: Math.max(24, Math.round(wPx * 0.05)),
       fill: '#000000',
       fontFamily: 'Arial',
+      textAlign: 'left',
     });
-    fabricRef.current.add(text);
-    fabricRef.current.setActiveObject(text);
+    fabricRef.current.add(tb);
+    fabricRef.current.setActiveObject(tb);
     fabricRef.current.renderAll();
   };
 
@@ -383,7 +522,7 @@ export function DesignEditor() {
     fabricRef.current.add(new Rect({
       left: wPx * 0.2, top: hPx * 0.2,
       width: wPx * 0.3, height: hPx * 0.2,
-      fill: '#3B82F6',
+      fill: '#3B82F6', rx: 0, ry: 0,
     }));
     fabricRef.current.renderAll();
   };
@@ -401,6 +540,33 @@ export function DesignEditor() {
     fabricRef.current.renderAll();
   };
 
+  const addTriangle = () => {
+    if (!fabricRef.current || !designRef.current) return;
+    const d = designRef.current;
+    const wPx = inchesToPixels(d.width_in, 150);
+    const hPx = inchesToPixels(d.height_in, 150);
+    const size = Math.min(wPx, hPx) * 0.2;
+    fabricRef.current.add(new Triangle({
+      left: wPx * 0.2, top: hPx * 0.2,
+      width: size, height: size,
+      fill: '#F59E0B',
+    }));
+    fabricRef.current.renderAll();
+  };
+
+  const addStar = () => {
+    if (!fabricRef.current || !designRef.current) return;
+    const d = designRef.current;
+    const wPx = inchesToPixels(d.width_in, 150);
+    const hPx = inchesToPixels(d.height_in, 150);
+    const r = Math.min(wPx, hPx) * 0.12;
+    fabricRef.current.add(new Polygon(starPoints(5, r, r * 0.45), {
+      left: wPx * 0.2, top: hPx * 0.2,
+      fill: '#EAB308',
+    }));
+    fabricRef.current.renderAll();
+  };
+
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !fabricRef.current || !designRef.current) return;
@@ -411,7 +577,6 @@ export function DesignEditor() {
       const wPx = inchesToPixels(d.width_in, 150);
       const hPx = inchesToPixels(d.height_in, 150);
       FabricImage.fromURL(url).then(img => {
-        // scale to fit half the canvas, centered
         const scale = Math.min((wPx * 0.5) / (img.width || 1), (hPx * 0.5) / (img.height || 1));
         const scaledW = (img.width || 0) * scale;
         const scaledH = (img.height || 0) * scale;
@@ -478,6 +643,9 @@ export function DesignEditor() {
     scheduleSave();
   };
 
+  const flipH = () => applyProp({ flipX: !sel.flipX });
+  const flipV = () => applyProp({ flipY: !sel.flipY });
+
   const changeBgColor = (color: string) => {
     if (!fabricRef.current) return;
     setBgColor(color);
@@ -487,21 +655,67 @@ export function DesignEditor() {
     scheduleSave();
   };
 
+  // ── Layers panel actions ──
+
+  const selectLayer = (obj: FabricObject) => {
+    if (!fabricRef.current) return;
+    fabricRef.current.setActiveObject(obj);
+    fabricRef.current.renderAll();
+    setSelectedObj(obj);
+    setSel(syncSelFromObj(obj));
+  };
+
+  const toggleVisibility = (obj: FabricObject) => {
+    obj.set('visible', !obj.visible);
+    fabricRef.current?.renderAll();
+    pushHistory();
+    scheduleSave();
+    bumpLayers();
+  };
+
+  const toggleLock = (obj: FabricObject) => {
+    const locked = obj.selectable === false;
+    obj.set({ selectable: locked, evented: locked, lockMovementX: !locked, lockMovementY: !locked, lockScalingX: !locked, lockScalingY: !locked, lockRotation: !locked });
+    if (!locked && fabricRef.current?.getActiveObject() === obj) {
+      fabricRef.current.discardActiveObject();
+    }
+    fabricRef.current?.renderAll();
+    pushHistory();
+    scheduleSave();
+    bumpLayers();
+  };
+
+  // ── Image filters ──
+
+  const applyImageFilter = (kind: 'brightness' | 'contrast', value: number) => {
+    const obj = fabricRef.current?.getActiveObject();
+    if (!obj || obj.type !== 'image' || !fabricRef.current) return;
+    const img = obj as any;
+    const list = (img.filters || []).filter((f: any) =>
+      !(kind === 'brightness' && f instanceof filters.Brightness) &&
+      !(kind === 'contrast' && f instanceof filters.Contrast)
+    );
+    if (value !== 0) {
+      if (kind === 'brightness') list.push(new filters.Brightness({ brightness: value }));
+      if (kind === 'contrast') list.push(new filters.Contrast({ contrast: value }));
+    }
+    img.filters = list;
+    img.applyFilters();
+    fabricRef.current.renderAll();
+    setSel(prev => ({ ...prev, [kind]: value }));
+    pushHistory();
+    scheduleSave();
+  };
+
+  // ── Size + name ──
+
   const handleSizeChange = async (newW: number, newH: number) => {
     if (!design || !fabricRef.current || !containerRef.current) return;
     const updated = { ...design, width_in: newW, height_in: newH };
     setDesign(updated);
     designRef.current = updated;
     await supabase.from('designs').update({ width_in: newW, height_in: newH, updated_at: new Date().toISOString() }).eq('id', design.id);
-    const wPx = inchesToPixels(newW, 150);
-    const hPx = inchesToPixels(newH, 150);
-    const cw = containerRef.current.clientWidth - 64;
-    const ch = containerRef.current.clientHeight - 64;
-    const scale = Math.min(cw / wPx, ch / hPx, 1);
-    setCanvasScale(scale);
-    fabricRef.current.setZoom(scale);
-    fabricRef.current.setDimensions({ width: wPx * scale, height: hPx * scale });
-    fabricRef.current.renderAll();
+    recalcScale();
   };
 
   const saveDesignName = async () => {
@@ -514,7 +728,7 @@ export function DesignEditor() {
     await supabase.from('designs').update({ name: designName }).eq('id', design.id);
   };
 
-  // ——— Export helpers ———
+  // ── Export ──
 
   const withExportZoom = async <T,>(fn: (fc: Canvas) => Promise<T>): Promise<T> => {
     const fc = fabricRef.current!;
@@ -556,7 +770,65 @@ export function DesignEditor() {
     URL.revokeObjectURL(url);
   };
 
-  // ——— Preflight + cart ———
+  // ── Templates ──
+
+  const applyTemplate = async (template: Template) => {
+    if (!fabricRef.current) return;
+    setShowTemplatePicker(false);
+    isRestoringRef.current = true;
+    let data = template.editor_json;
+    if (typeof data === 'string') {
+      try { data = JSON.parse(data); } catch { data = null; }
+    }
+    if (data) {
+      await new Promise<void>(resolve => {
+        fabricRef.current!.loadFromJSON(data, () => {
+          fabricRef.current!.renderAll();
+          resolve();
+        });
+      });
+      if (typeof fabricRef.current.backgroundColor === 'string') {
+        setBgColor(fabricRef.current.backgroundColor);
+      }
+    }
+    isRestoringRef.current = false;
+    pushHistory();
+    scheduleSave();
+    bumpLayers();
+    supabase.from('templates').update({ usage_count: template.usage_count + 1 }).eq('id', template.id);
+  };
+
+  // ── Proof share ──
+
+  const generateProofLink = async () => {
+    if (!designRef.current || !user) return;
+    setProofLoading(true);
+    try {
+      await saveDesign();
+      const token = generateProofToken();
+      const { error } = await supabase.from('proof_links').insert({
+        design_id: designRef.current.id,
+        token,
+        created_by: user.id,
+        title: `${designRef.current.name} - Design Proof`,
+      });
+      if (error) { alert('Failed to create proof link'); return; }
+      setProofUrl(`${window.location.origin}/proof/${token}`);
+      setShowProofModal(true);
+    } finally {
+      setProofLoading(false);
+    }
+  };
+
+  const copyProofUrl = async () => {
+    try {
+      await navigator.clipboard.writeText(proofUrl);
+    } catch {
+      // ignore
+    }
+  };
+
+  // ── Preflight + cart ──
 
   const handleAddToCart = async () => {
     if (!design || !fabricRef.current) return;
@@ -603,11 +875,16 @@ export function DesignEditor() {
     setShowPreflight(true);
   };
 
-  // ——— Derived state ———
+  // ── Derived ──
 
-  const isText = selectedObj?.type === 'i-text' || selectedObj?.type === 'text' || selectedObj?.type === 'textbox';
-  const isShape = selectedObj?.type === 'rect' || selectedObj?.type === 'circle' || selectedObj?.type === 'ellipse';
-  const safeZonePx = design ? design.safe_zone_in * 150 * canvasScale : 0;
+  const isText = selectedObj?.type === 'textbox' || selectedObj?.type === 'i-text' || selectedObj?.type === 'text';
+  const isShape = selectedObj?.type === 'rect' || selectedObj?.type === 'circle' || selectedObj?.type === 'triangle' || selectedObj?.type === 'polygon' || selectedObj?.type === 'ellipse';
+  const isRect = selectedObj?.type === 'rect';
+  const isImage = selectedObj?.type === 'image';
+  const safeZonePx = design ? design.safe_zone_in * 150 * effectiveScale : 0;
+  const objects = fabricRef.current ? fabricRef.current.getObjects() : [];
+  // referenced just to make React re-render the layers panel on bumpLayers()
+  void layersVersion;
 
   if (loading) {
     return (
@@ -617,16 +894,16 @@ export function DesignEditor() {
     );
   }
 
+  const imgDPI = isImage && selectedObj ? computeImageDPI(selectedObj) : null;
+  const filteredTemplates = templates.filter(t => !design?.product_type || !t.product_type || t.product_type === design.product_type);
+
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
 
       {/* ── Top bar ── */}
       <div className="bg-white border-b border-gray-200 px-4 py-2 flex items-center justify-between flex-shrink-0 gap-4">
         <div className="flex items-center gap-3 min-w-0">
-          <button
-            onClick={() => navigate('/account/designs')}
-            className="text-gray-500 hover:text-gray-800 text-sm flex-shrink-0"
-          >
+          <button onClick={() => navigate('/account/designs')} className="text-gray-500 hover:text-gray-800 text-sm flex-shrink-0">
             ← Back
           </button>
 
@@ -665,20 +942,10 @@ export function DesignEditor() {
         </div>
 
         <div className="flex items-center gap-1.5 flex-shrink-0">
-          <button
-            onClick={undoHistory}
-            disabled={!canUndo}
-            title="Undo (Ctrl+Z)"
-            className="p-2 rounded hover:bg-gray-100 disabled:opacity-30 transition-colors"
-          >
+          <button onClick={undoHistory} disabled={!canUndo} title="Undo (Ctrl+Z)" className="p-2 rounded hover:bg-gray-100 disabled:opacity-30 transition-colors">
             <Undo2 className="w-4 h-4" />
           </button>
-          <button
-            onClick={redoHistory}
-            disabled={!canRedo}
-            title="Redo (Ctrl+Y)"
-            className="p-2 rounded hover:bg-gray-100 disabled:opacity-30 transition-colors"
-          >
+          <button onClick={redoHistory} disabled={!canRedo} title="Redo (Ctrl+Y)" className="p-2 rounded hover:bg-gray-100 disabled:opacity-30 transition-colors">
             <Redo2 className="w-4 h-4" />
           </button>
 
@@ -690,6 +957,33 @@ export function DesignEditor() {
             className={`p-2 rounded transition-colors ${showSafeZone ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-100 text-gray-500'}`}
           >
             {showSafeZone ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+          </button>
+
+          <button
+            onClick={() => setShowLayers(v => !v)}
+            title={showLayers ? 'Hide layers' : 'Show layers'}
+            className={`p-2 rounded transition-colors ${showLayers ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-100 text-gray-500'}`}
+          >
+            <Layers className="w-4 h-4" />
+          </button>
+
+          <button
+            onClick={() => setShowTemplatePicker(true)}
+            title="Templates"
+            className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm transition-colors"
+          >
+            <Star className="w-4 h-4" />
+            Templates
+          </button>
+
+          <button
+            onClick={generateProofLink}
+            disabled={proofLoading}
+            title="Share proof for customer review"
+            className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm transition-colors disabled:opacity-50"
+          >
+            {proofLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Share2 className="w-4 h-4" />}
+            Share Proof
           </button>
 
           <div className="relative">
@@ -708,18 +1002,12 @@ export function DesignEditor() {
             )}
           </div>
 
-          <button
-            onClick={runCheck}
-            className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm transition-colors"
-          >
+          <button onClick={runCheck} className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm transition-colors">
             <AlertTriangle className="w-4 h-4" />
             Check
           </button>
 
-          <button
-            onClick={handleAddToCart}
-            className="flex items-center gap-1.5 px-4 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium transition-colors"
-          >
+          <button onClick={handleAddToCart} className="flex items-center gap-1.5 px-4 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium transition-colors">
             <ShoppingCart className="w-4 h-4" />
             Add to Cart
           </button>
@@ -731,59 +1019,39 @@ export function DesignEditor() {
         {/* ── Left panel ── */}
         <div className="w-64 bg-white border-r border-gray-200 flex flex-col overflow-y-auto flex-shrink-0">
 
-          {/* Add elements */}
           <div className="p-3 border-b border-gray-100">
             <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Add Elements</p>
-            <div className="grid grid-cols-2 gap-1.5">
-              <button
-                onClick={addText}
-                className="flex flex-col items-center gap-1 py-3 px-2 border border-gray-200 rounded-lg hover:bg-green-50 hover:border-green-300 text-xs text-gray-700 transition-colors"
-              >
-                <Type className="w-5 h-5 text-gray-500" />
-                Text
+            <div className="grid grid-cols-3 gap-1.5">
+              <button onClick={addTextbox} className="flex flex-col items-center gap-1 py-2.5 px-1 border border-gray-200 rounded-lg hover:bg-green-50 hover:border-green-300 text-[11px] text-gray-700 transition-colors">
+                <Type className="w-4 h-4 text-gray-500" /> Text
               </button>
-              <label className="flex flex-col items-center gap-1 py-3 px-2 border border-gray-200 rounded-lg hover:bg-green-50 hover:border-green-300 text-xs text-gray-700 cursor-pointer transition-colors">
-                <ImageIcon className="w-5 h-5 text-gray-500" />
-                Image
+              <label className="flex flex-col items-center gap-1 py-2.5 px-1 border border-gray-200 rounded-lg hover:bg-green-50 hover:border-green-300 text-[11px] text-gray-700 cursor-pointer transition-colors">
+                <ImageIcon className="w-4 h-4 text-gray-500" /> Image
                 <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
               </label>
-              <button
-                onClick={addRectangle}
-                className="flex flex-col items-center gap-1 py-3 px-2 border border-gray-200 rounded-lg hover:bg-green-50 hover:border-green-300 text-xs text-gray-700 transition-colors"
-              >
-                <Square className="w-5 h-5 text-gray-500" />
-                Rectangle
+              <button onClick={addRectangle} className="flex flex-col items-center gap-1 py-2.5 px-1 border border-gray-200 rounded-lg hover:bg-green-50 hover:border-green-300 text-[11px] text-gray-700 transition-colors">
+                <Square className="w-4 h-4 text-gray-500" /> Rect
               </button>
-              <button
-                onClick={addCircle}
-                className="flex flex-col items-center gap-1 py-3 px-2 border border-gray-200 rounded-lg hover:bg-green-50 hover:border-green-300 text-xs text-gray-700 transition-colors"
-              >
-                <LucideCircle className="w-5 h-5 text-gray-500" />
-                Circle
+              <button onClick={addCircle} className="flex flex-col items-center gap-1 py-2.5 px-1 border border-gray-200 rounded-lg hover:bg-green-50 hover:border-green-300 text-[11px] text-gray-700 transition-colors">
+                <LucideCircle className="w-4 h-4 text-gray-500" /> Circle
+              </button>
+              <button onClick={addTriangle} className="flex flex-col items-center gap-1 py-2.5 px-1 border border-gray-200 rounded-lg hover:bg-green-50 hover:border-green-300 text-[11px] text-gray-700 transition-colors">
+                <TriangleIcon className="w-4 h-4 text-gray-500" /> Triangle
+              </button>
+              <button onClick={addStar} className="flex flex-col items-center gap-1 py-2.5 px-1 border border-gray-200 rounded-lg hover:bg-green-50 hover:border-green-300 text-[11px] text-gray-700 transition-colors">
+                <Star className="w-4 h-4 text-gray-500" /> Star
               </button>
             </div>
           </div>
 
-          {/* Background color */}
           <div className="p-3 border-b border-gray-100">
             <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Background</p>
             <div className="flex items-center gap-2">
-              <input
-                type="color"
-                value={bgColor}
-                onChange={e => changeBgColor(e.target.value)}
-                className="w-9 h-8 rounded cursor-pointer border border-gray-300 flex-shrink-0"
-              />
-              <input
-                type="text"
-                value={bgColor}
-                onChange={e => changeBgColor(e.target.value)}
-                className="flex-1 min-w-0 px-2 py-1.5 border border-gray-200 rounded text-xs font-mono"
-              />
+              <input type="color" value={bgColor} onChange={e => changeBgColor(e.target.value)} className="w-9 h-8 rounded cursor-pointer border border-gray-300 flex-shrink-0" />
+              <input type="text" value={bgColor} onChange={e => changeBgColor(e.target.value)} className="flex-1 min-w-0 px-2 py-1.5 border border-gray-200 rounded text-xs font-mono" />
             </div>
           </div>
 
-          {/* ── Context-sensitive object properties ── */}
           {selectedObj && (
             <div className="p-3 border-b border-gray-100 space-y-3">
               <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Properties</p>
@@ -795,70 +1063,58 @@ export function DesignEditor() {
                     <label className="text-xs text-gray-600 mb-1 block">Font Family</label>
                     <select
                       value={sel.fontFamily}
-                      onChange={e => {
-                        const f = e.target.value;
-                        document.fonts.load(`16px "${f}"`).then(() => applyProp({ fontFamily: f }));
-                      }}
+                      onChange={e => { const f = e.target.value; document.fonts.load(`16px "${f}"`).then(() => applyProp({ fontFamily: f })); }}
                       className="w-full px-2 py-1.5 border border-gray-200 rounded text-xs focus:ring-1 focus:ring-green-500"
                     >
-                      {AVAILABLE_FONTS.map(f => (
-                        <option key={f} value={f} style={{ fontFamily: f }}>{f}</option>
-                      ))}
+                      {AVAILABLE_FONTS.map(f => <option key={f} value={f} style={{ fontFamily: f }}>{f}</option>)}
                     </select>
                   </div>
 
                   <div className="flex gap-2">
                     <div className="flex-1 min-w-0">
                       <label className="text-xs text-gray-600 mb-1 block">Size (pt)</label>
-                      <input
-                        type="number"
-                        min={6}
-                        max={500}
-                        value={sel.fontSize}
-                        onChange={e => applyProp({ fontSize: parseInt(e.target.value) || 36 })}
-                        className="w-full px-2 py-1.5 border border-gray-200 rounded text-xs focus:ring-1 focus:ring-green-500"
-                      />
+                      <input type="number" min={6} max={500} value={sel.fontSize} onChange={e => applyProp({ fontSize: parseInt(e.target.value) || 36 })} className="w-full px-2 py-1.5 border border-gray-200 rounded text-xs focus:ring-1 focus:ring-green-500" />
                     </div>
                     <div className="flex items-end gap-1 pb-0.5">
-                      <button
-                        onClick={() => applyProp({ fontWeight: sel.fontWeight === 'bold' ? 'normal' : 'bold' })}
-                        title="Bold"
-                        className={`p-1.5 rounded border text-xs transition-colors ${sel.fontWeight === 'bold' ? 'bg-gray-800 text-white border-gray-800' : 'border-gray-200 hover:bg-gray-50'}`}
-                      >
+                      <button onClick={() => applyProp({ fontWeight: sel.fontWeight === 'bold' ? 'normal' : 'bold' })} title="Bold" className={`p-1.5 rounded border transition-colors ${sel.fontWeight === 'bold' ? 'bg-gray-800 text-white border-gray-800' : 'border-gray-200 hover:bg-gray-50'}`}>
                         <Bold className="w-3 h-3" />
                       </button>
-                      <button
-                        onClick={() => applyProp({ fontStyle: sel.fontStyle === 'italic' ? 'normal' : 'italic' })}
-                        title="Italic"
-                        className={`p-1.5 rounded border text-xs transition-colors ${sel.fontStyle === 'italic' ? 'bg-gray-800 text-white border-gray-800' : 'border-gray-200 hover:bg-gray-50'}`}
-                      >
+                      <button onClick={() => applyProp({ fontStyle: sel.fontStyle === 'italic' ? 'normal' : 'italic' })} title="Italic" className={`p-1.5 rounded border transition-colors ${sel.fontStyle === 'italic' ? 'bg-gray-800 text-white border-gray-800' : 'border-gray-200 hover:bg-gray-50'}`}>
                         <Italic className="w-3 h-3" />
                       </button>
-                      <button
-                        onClick={() => applyProp({ underline: !sel.underline })}
-                        title="Underline"
-                        className={`p-1.5 rounded border text-xs transition-colors ${sel.underline ? 'bg-gray-800 text-white border-gray-800' : 'border-gray-200 hover:bg-gray-50'}`}
-                      >
+                      <button onClick={() => applyProp({ underline: !sel.underline })} title="Underline" className={`p-1.5 rounded border transition-colors ${sel.underline ? 'bg-gray-800 text-white border-gray-800' : 'border-gray-200 hover:bg-gray-50'}`}>
                         <Underline className="w-3 h-3" />
                       </button>
+                    </div>
+                  </div>
+
+                  {/* Text alignment within text box */}
+                  <div>
+                    <label className="text-xs text-gray-600 mb-1 block">Text Alignment</label>
+                    <div className="grid grid-cols-4 gap-1">
+                      {[
+                        { v: 'left', I: AlignLeft },
+                        { v: 'center', I: AlignCenter },
+                        { v: 'right', I: AlignRight },
+                        { v: 'justify', I: AlignJustify },
+                      ].map(({ v, I }) => (
+                        <button
+                          key={v}
+                          onClick={() => applyProp({ textAlign: v })}
+                          title={v}
+                          className={`p-1.5 rounded border transition-colors ${sel.textAlign === v ? 'bg-gray-800 text-white border-gray-800' : 'border-gray-200 hover:bg-gray-50'}`}
+                        >
+                          <I className="w-3.5 h-3.5 mx-auto" />
+                        </button>
+                      ))}
                     </div>
                   </div>
 
                   <div>
                     <label className="text-xs text-gray-600 mb-1 block">Text Color</label>
                     <div className="flex gap-2">
-                      <input
-                        type="color"
-                        value={sel.fill || '#000000'}
-                        onChange={e => applyProp({ fill: e.target.value })}
-                        className="w-9 h-8 rounded cursor-pointer border border-gray-300 flex-shrink-0"
-                      />
-                      <input
-                        type="text"
-                        value={sel.fill}
-                        onChange={e => applyProp({ fill: e.target.value })}
-                        className="flex-1 min-w-0 px-2 py-1.5 border border-gray-200 rounded text-xs font-mono"
-                      />
+                      <input type="color" value={sel.fill || '#000000'} onChange={e => applyProp({ fill: e.target.value })} className="w-9 h-8 rounded cursor-pointer border border-gray-300 flex-shrink-0" />
+                      <input type="text" value={sel.fill} onChange={e => applyProp({ fill: e.target.value })} className="flex-1 min-w-0 px-2 py-1.5 border border-gray-200 rounded text-xs font-mono" />
                     </div>
                   </div>
                 </>
@@ -870,71 +1126,93 @@ export function DesignEditor() {
                   <div>
                     <label className="text-xs text-gray-600 mb-1 block">Fill Color</label>
                     <div className="flex gap-2">
-                      <input
-                        type="color"
-                        value={sel.fill || '#3B82F6'}
-                        onChange={e => applyProp({ fill: e.target.value })}
-                        className="w-9 h-8 rounded cursor-pointer border border-gray-300 flex-shrink-0"
-                      />
-                      <input
-                        type="text"
-                        value={sel.fill}
-                        onChange={e => applyProp({ fill: e.target.value })}
-                        className="flex-1 min-w-0 px-2 py-1.5 border border-gray-200 rounded text-xs font-mono"
-                      />
+                      <input type="color" value={sel.fill || '#3B82F6'} onChange={e => applyProp({ fill: e.target.value })} className="w-9 h-8 rounded cursor-pointer border border-gray-300 flex-shrink-0" />
+                      <input type="text" value={sel.fill} onChange={e => applyProp({ fill: e.target.value })} className="flex-1 min-w-0 px-2 py-1.5 border border-gray-200 rounded text-xs font-mono" />
                     </div>
                   </div>
                   <div>
                     <label className="text-xs text-gray-600 mb-1 block">
                       Stroke — <span className="font-normal">width</span>
-                      <input
-                        type="number"
-                        min={0}
-                        max={30}
-                        value={sel.strokeWidth}
-                        onChange={e => applyProp({ strokeWidth: parseInt(e.target.value) || 0 })}
-                        className="ml-1 w-12 px-1.5 py-0.5 border border-gray-200 rounded text-xs inline-block"
-                      />
-                      px
+                      <input type="number" min={0} max={30} value={sel.strokeWidth} onChange={e => applyProp({ strokeWidth: parseInt(e.target.value) || 0 })} className="ml-1 w-12 px-1.5 py-0.5 border border-gray-200 rounded text-xs inline-block" />px
                     </label>
                     <div className="flex gap-2">
+                      <input type="color" value={sel.stroke || '#000000'} onChange={e => applyProp({ stroke: e.target.value, strokeWidth: sel.strokeWidth || 2 })} className="w-9 h-8 rounded cursor-pointer border border-gray-300 flex-shrink-0" />
+                      <input type="text" value={sel.stroke} onChange={e => applyProp({ stroke: e.target.value })} className="flex-1 min-w-0 px-2 py-1.5 border border-gray-200 rounded text-xs font-mono" />
+                    </div>
+                  </div>
+                  {isRect && (
+                    <div>
+                      <label className="text-xs text-gray-600 mb-1 flex justify-between">
+                        <span>Corner Radius</span>
+                        <span className="font-mono">{sel.rx}px</span>
+                      </label>
                       <input
-                        type="color"
-                        value={sel.stroke || '#000000'}
-                        onChange={e => applyProp({ stroke: e.target.value, strokeWidth: sel.strokeWidth || 2 })}
-                        className="w-9 h-8 rounded cursor-pointer border border-gray-300 flex-shrink-0"
-                      />
-                      <input
-                        type="text"
-                        value={sel.stroke}
-                        onChange={e => applyProp({ stroke: e.target.value })}
-                        className="flex-1 min-w-0 px-2 py-1.5 border border-gray-200 rounded text-xs font-mono"
+                        type="range"
+                        min={0}
+                        max={200}
+                        step={1}
+                        value={sel.rx}
+                        onChange={e => { const r = parseInt(e.target.value); applyProp({ rx: r, ry: r }); }}
+                        className="w-full accent-green-600"
                       />
                     </div>
+                  )}
+                </>
+              )}
+
+              {/* Image filters */}
+              {isImage && (
+                <>
+                  {imgDPI !== null && (
+                    <div className={`p-2 rounded text-[11px] ${imgDPI < 100 ? 'bg-red-50 text-red-700' : imgDPI < 150 ? 'bg-yellow-50 text-yellow-700' : 'bg-green-50 text-green-700'}`}>
+                      Effective DPI: <strong>{Math.round(imgDPI)}</strong>
+                      {imgDPI < 100 ? ' — too low' : imgDPI < 150 ? ' — low' : ' — good'}
+                    </div>
+                  )}
+                  <div>
+                    <label className="text-xs text-gray-600 mb-1 flex justify-between">
+                      <span>Brightness</span>
+                      <span className="font-mono">{Math.round(sel.brightness * 100)}</span>
+                    </label>
+                    <input type="range" min={-0.5} max={0.5} step={0.01} value={sel.brightness} onChange={e => applyImageFilter('brightness', parseFloat(e.target.value))} className="w-full accent-green-600" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-600 mb-1 flex justify-between">
+                      <span>Contrast</span>
+                      <span className="font-mono">{Math.round(sel.contrast * 100)}</span>
+                    </label>
+                    <input type="range" min={-0.5} max={0.5} step={0.01} value={sel.contrast} onChange={e => applyImageFilter('contrast', parseFloat(e.target.value))} className="w-full accent-green-600" />
                   </div>
                 </>
               )}
 
-              {/* Opacity — all types */}
+              {/* Opacity + flip — all types */}
               <div>
                 <label className="text-xs text-gray-600 mb-1 flex justify-between">
                   <span>Opacity</span>
                   <span className="font-mono">{Math.round(sel.opacity * 100)}%</span>
                 </label>
-                <input
-                  type="range"
-                  min={0}
-                  max={1}
-                  step={0.01}
-                  value={sel.opacity}
-                  onChange={e => applyProp({ opacity: parseFloat(e.target.value) })}
-                  className="w-full accent-green-600"
-                />
+                <input type="range" min={0} max={1} step={0.01} value={sel.opacity} onChange={e => applyProp({ opacity: parseFloat(e.target.value) })} className="w-full accent-green-600" />
+              </div>
+              <div className="flex gap-1">
+                <button
+                  onClick={flipH}
+                  title="Flip Horizontal"
+                  className={`flex-1 flex items-center justify-center gap-1 p-2 border rounded text-xs transition-colors ${sel.flipX ? 'bg-gray-800 text-white border-gray-800' : 'border-gray-200 hover:bg-gray-50'}`}
+                >
+                  <FlipHorizontal className="w-3.5 h-3.5" /> Flip H
+                </button>
+                <button
+                  onClick={flipV}
+                  title="Flip Vertical"
+                  className={`flex-1 flex items-center justify-center gap-1 p-2 border rounded text-xs transition-colors ${sel.flipY ? 'bg-gray-800 text-white border-gray-800' : 'border-gray-200 hover:bg-gray-50'}`}
+                >
+                  <FlipVertical className="w-3.5 h-3.5" /> Flip V
+                </button>
               </div>
             </div>
           )}
 
-          {/* Alignment tools */}
           {selectedObj && (
             <div className="p-3 border-b border-gray-100">
               <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Align on Canvas</p>
@@ -961,46 +1239,29 @@ export function DesignEditor() {
             </div>
           )}
 
-          {/* Layer controls */}
           {selectedObj && (
             <div className="p-3 border-b border-gray-100">
               <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Layers</p>
               <div className="grid grid-cols-2 gap-1 mb-2">
-                <button
-                  onClick={() => { fabricRef.current?.bringObjectToFront(selectedObj); fabricRef.current?.renderAll(); pushHistory(); scheduleSave(); }}
-                  className="flex items-center justify-center gap-1 p-2 border border-gray-200 rounded hover:bg-gray-50 text-xs text-gray-700 transition-colors"
-                >
+                <button onClick={() => { fabricRef.current?.bringObjectToFront(selectedObj); fabricRef.current?.renderAll(); pushHistory(); scheduleSave(); bumpLayers(); }} className="flex items-center justify-center gap-1 p-2 border border-gray-200 rounded hover:bg-gray-50 text-xs text-gray-700 transition-colors">
                   <ChevronsUp className="w-3.5 h-3.5" /> Front
                 </button>
-                <button
-                  onClick={() => { fabricRef.current?.sendObjectToBack(selectedObj); fabricRef.current?.renderAll(); pushHistory(); scheduleSave(); }}
-                  className="flex items-center justify-center gap-1 p-2 border border-gray-200 rounded hover:bg-gray-50 text-xs text-gray-700 transition-colors"
-                >
+                <button onClick={() => { fabricRef.current?.sendObjectToBack(selectedObj); fabricRef.current?.renderAll(); pushHistory(); scheduleSave(); bumpLayers(); }} className="flex items-center justify-center gap-1 p-2 border border-gray-200 rounded hover:bg-gray-50 text-xs text-gray-700 transition-colors">
                   <ChevronsDown className="w-3.5 h-3.5" /> Back
                 </button>
-                <button
-                  onClick={() => { fabricRef.current?.bringObjectForward(selectedObj); fabricRef.current?.renderAll(); pushHistory(); scheduleSave(); }}
-                  className="flex items-center justify-center gap-1 p-2 border border-gray-200 rounded hover:bg-gray-50 text-xs text-gray-700 transition-colors"
-                >
+                <button onClick={() => { fabricRef.current?.bringObjectForward(selectedObj); fabricRef.current?.renderAll(); pushHistory(); scheduleSave(); bumpLayers(); }} className="flex items-center justify-center gap-1 p-2 border border-gray-200 rounded hover:bg-gray-50 text-xs text-gray-700 transition-colors">
                   <ArrowUp className="w-3.5 h-3.5" /> Fwd
                 </button>
-                <button
-                  onClick={() => { fabricRef.current?.sendObjectBackwards(selectedObj); fabricRef.current?.renderAll(); pushHistory(); scheduleSave(); }}
-                  className="flex items-center justify-center gap-1 p-2 border border-gray-200 rounded hover:bg-gray-50 text-xs text-gray-700 transition-colors"
-                >
+                <button onClick={() => { fabricRef.current?.sendObjectBackwards(selectedObj); fabricRef.current?.renderAll(); pushHistory(); scheduleSave(); bumpLayers(); }} className="flex items-center justify-center gap-1 p-2 border border-gray-200 rounded hover:bg-gray-50 text-xs text-gray-700 transition-colors">
                   <ArrowDown className="w-3.5 h-3.5" /> Bwd
                 </button>
               </div>
-              <button
-                onClick={deleteSelected}
-                className="w-full flex items-center justify-center gap-2 py-2 bg-red-50 text-red-600 border border-red-200 rounded hover:bg-red-100 text-xs transition-colors"
-              >
+              <button onClick={deleteSelected} className="w-full flex items-center justify-center gap-2 py-2 bg-red-50 text-red-600 border border-red-200 rounded hover:bg-red-100 text-xs transition-colors">
                 <Trash2 className="w-3.5 h-3.5" /> Delete (Del)
               </button>
             </div>
           )}
 
-          {/* Print size selector */}
           <div className="p-3">
             <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Print Size</p>
             {product?.size_preset_category ? (
@@ -1016,25 +1277,11 @@ export function DesignEditor() {
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="text-xs text-gray-600 mb-1 block">W (in)</label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    min="0.1"
-                    value={design?.width_in || ''}
-                    onChange={e => { const v = parseFloat(e.target.value); if (!isNaN(v) && v > 0 && design) handleSizeChange(v, design.height_in); }}
-                    className="w-full px-2 py-1.5 border border-gray-200 rounded text-xs focus:ring-1 focus:ring-green-500"
-                  />
+                  <input type="number" step="0.1" min="0.1" value={design?.width_in || ''} onChange={e => { const v = parseFloat(e.target.value); if (!isNaN(v) && v > 0 && design) handleSizeChange(v, design.height_in); }} className="w-full px-2 py-1.5 border border-gray-200 rounded text-xs focus:ring-1 focus:ring-green-500" />
                 </div>
                 <div>
                   <label className="text-xs text-gray-600 mb-1 block">H (in)</label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    min="0.1"
-                    value={design?.height_in || ''}
-                    onChange={e => { const v = parseFloat(e.target.value); if (!isNaN(v) && v > 0 && design) handleSizeChange(design.width_in, v); }}
-                    className="w-full px-2 py-1.5 border border-gray-200 rounded text-xs focus:ring-1 focus:ring-green-500"
-                  />
+                  <input type="number" step="0.1" min="0.1" value={design?.height_in || ''} onChange={e => { const v = parseFloat(e.target.value); if (!isNaN(v) && v > 0 && design) handleSizeChange(design.width_in, v); }} className="w-full px-2 py-1.5 border border-gray-200 rounded text-xs focus:ring-1 focus:ring-green-500" />
                 </div>
               </div>
             )}
@@ -1045,20 +1292,14 @@ export function DesignEditor() {
         </div>
 
         {/* ── Canvas area ── */}
-        <div ref={containerRef} className="flex-1 p-8 flex items-center justify-center overflow-hidden relative">
+        <div ref={containerRef} className="flex-1 p-8 flex items-center justify-center overflow-auto relative bg-gray-100">
           <div className="bg-white p-4 rounded-lg shadow-xl">
             <div className="relative" style={{ display: 'inline-block' }}>
               <canvas ref={canvasRef} className="block" />
               {showSafeZone && design && safeZonePx > 0 && (
                 <div className="absolute inset-0 pointer-events-none select-none">
-                  <div
-                    className="absolute border-2 border-dashed border-blue-400/50 rounded-sm"
-                    style={{ inset: `${safeZonePx}px` }}
-                  />
-                  <span
-                    className="absolute text-[9px] leading-3 text-blue-400/70 bg-white/70 px-0.5 rounded"
-                    style={{ top: safeZonePx + 3, left: safeZonePx + 3 }}
-                  >
+                  <div className="absolute border-2 border-dashed border-blue-400/50 rounded-sm" style={{ inset: `${safeZonePx}px` }} />
+                  <span className="absolute text-[9px] leading-3 text-blue-400/70 bg-white/70 px-0.5 rounded" style={{ top: safeZonePx + 3, left: safeZonePx + 3 }}>
                     Safe Zone
                   </span>
                 </div>
@@ -1066,11 +1307,80 @@ export function DesignEditor() {
             </div>
           </div>
 
-          {/* Hint bar */}
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-xs text-gray-400 bg-white/80 px-3 py-1 rounded-full shadow-sm pointer-events-none">
-            Click to select · Double-click text to edit · Del to delete · Ctrl+Z undo · Ctrl+C/V copy/paste
+          {/* Zoom controls */}
+          <div className="absolute bottom-4 right-4 bg-white border border-gray-200 rounded-lg shadow-md flex items-center divide-x divide-gray-200">
+            <button onClick={zoomOut} title="Zoom out (Ctrl+-)" className="p-2 hover:bg-gray-50 text-gray-700">
+              <Minus className="w-4 h-4" />
+            </button>
+            <button onClick={zoomFit} title="Fit to screen (Ctrl+0)" className="px-3 py-2 hover:bg-gray-50 text-xs font-medium text-gray-700 min-w-[64px]">
+              {Math.round(userZoom * 100)}%
+            </button>
+            <button onClick={zoomIn} title="Zoom in (Ctrl++)" className="p-2 hover:bg-gray-50 text-gray-700">
+              <Plus className="w-4 h-4" />
+            </button>
+            <button onClick={zoomFit} title="Reset zoom" className="p-2 hover:bg-gray-50 text-gray-700">
+              <Maximize2 className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Keyboard hint */}
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-xs text-gray-400 bg-white/80 px-3 py-1 rounded-full shadow-sm pointer-events-none whitespace-nowrap">
+            Click to select · Double-click text to edit · Ctrl+Z undo · Ctrl+C/V copy · Ctrl+/- zoom
           </div>
         </div>
+
+        {/* ── Layers panel (right) ── */}
+        {showLayers && (
+          <div className="w-56 bg-white border-l border-gray-200 flex flex-col flex-shrink-0">
+            <div className="px-3 py-2 border-b border-gray-100 flex items-center justify-between">
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Layers</p>
+              <button onClick={() => setShowLayers(false)} className="text-gray-400 hover:text-gray-700">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-2 space-y-1">
+              {objects.length === 0 ? (
+                <p className="text-xs text-gray-400 text-center py-4">No layers yet.<br />Add elements to start.</p>
+              ) : (
+                [...objects].reverse().map((obj, idx) => {
+                  const Icon = getObjectIcon(obj.type || '');
+                  const isSelected = obj === selectedObj;
+                  const isHidden = obj.visible === false;
+                  const isLocked = obj.selectable === false;
+                  return (
+                    <div
+                      key={idx}
+                      onClick={() => selectLayer(obj)}
+                      className={`group flex items-center gap-1 px-2 py-1.5 rounded text-xs cursor-pointer border transition-colors ${isSelected ? 'bg-green-50 border-green-300' : 'border-transparent hover:bg-gray-50'}`}
+                    >
+                      <Icon className="w-3.5 h-3.5 flex-shrink-0 text-gray-500" />
+                      <span className={`flex-1 truncate ${isHidden ? 'line-through opacity-50' : ''}`}>
+                        {getObjectLabel(obj)}
+                      </span>
+                      <button
+                        onClick={e => { e.stopPropagation(); toggleVisibility(obj); }}
+                        title={isHidden ? 'Show' : 'Hide'}
+                        className="opacity-50 hover:opacity-100 transition-opacity"
+                      >
+                        {isHidden ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                      </button>
+                      <button
+                        onClick={e => { e.stopPropagation(); toggleLock(obj); }}
+                        title={isLocked ? 'Unlock' : 'Lock'}
+                        className="opacity-50 hover:opacity-100 transition-opacity"
+                      >
+                        {isLocked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
+                      </button>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+            <div className="px-3 py-2 border-t border-gray-100 text-[10px] text-gray-400">
+              {objects.length} {objects.length === 1 ? 'layer' : 'layers'}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── Preflight modal ── */}
@@ -1088,22 +1398,14 @@ export function DesignEditor() {
             {preflight.blockers.length > 0 && (
               <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
                 <p className="font-semibold text-red-800 text-sm mb-2">Must fix before printing:</p>
-                <ul className="space-y-1">
-                  {preflight.blockers.map((m, i) => (
-                    <li key={i} className="text-sm text-red-700">• {m}</li>
-                  ))}
-                </ul>
+                <ul className="space-y-1">{preflight.blockers.map((m, i) => <li key={i} className="text-sm text-red-700">• {m}</li>)}</ul>
               </div>
             )}
 
             {preflight.warnings.length > 0 && (
               <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                 <p className="font-semibold text-yellow-800 text-sm mb-2">Warnings:</p>
-                <ul className="space-y-1">
-                  {preflight.warnings.map((m, i) => (
-                    <li key={i} className="text-sm text-yellow-700">• {m}</li>
-                  ))}
-                </ul>
+                <ul className="space-y-1">{preflight.warnings.map((m, i) => <li key={i} className="text-sm text-yellow-700">• {m}</li>)}</ul>
               </div>
             )}
 
@@ -1113,30 +1415,117 @@ export function DesignEditor() {
               </div>
             )}
 
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-700">
+              <strong>Color note:</strong> Your design is shown in RGB on screen. Final print uses CMYK,
+              so very bright/saturated colors (especially neon greens, bright blues, oranges)
+              may print slightly less vivid than they appear here. This is normal.
+            </div>
+
             <div className="flex gap-2">
-              <button
-                onClick={() => setShowPreflight(false)}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm transition-colors"
-              >
+              <button onClick={() => setShowPreflight(false)} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm transition-colors">
                 {preflight.blockers.length > 0 ? 'Fix Issues' : 'Back to Editing'}
               </button>
               {preflightCartMode && preflight.blockers.length === 0 && (
-                <button
-                  onClick={executeAddToCart}
-                  className="flex-1 px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 text-sm transition-colors"
-                >
+                <button onClick={executeAddToCart} className="flex-1 px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 text-sm transition-colors">
                   Add to Cart Anyway
                 </button>
               )}
               {!preflightCartMode && preflight.passed && (
-                <button
-                  onClick={executeAddToCart}
-                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm transition-colors"
-                >
+                <button onClick={executeAddToCart} className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm transition-colors">
                   Add to Cart
                 </button>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Template picker modal ── */}
+      {showTemplatePicker && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 max-w-4xl w-full max-h-[85vh] overflow-y-auto shadow-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">Start with a Template</h2>
+                <p className="text-sm text-gray-500 mt-1">Pick a professional starter or begin from blank.</p>
+              </div>
+              <button onClick={() => setShowTemplatePicker(false)} className="text-gray-400 hover:text-gray-700">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <button
+                onClick={() => setShowTemplatePicker(false)}
+                className="bg-gray-50 rounded-lg p-6 border-2 border-dashed border-gray-300 hover:border-green-500 hover:bg-green-50 transition-colors flex flex-col items-center justify-center min-h-[180px] group"
+              >
+                <Plus className="w-10 h-10 text-gray-400 group-hover:text-green-600 mb-2" />
+                <p className="font-semibold text-gray-900">Start Blank</p>
+                <p className="text-xs text-gray-500 mt-1">Empty canvas</p>
+              </button>
+
+              {filteredTemplates.length === 0 && (
+                <div className="col-span-full text-center py-8 text-sm text-gray-500">
+                  No templates available yet — start blank and build from scratch.
+                </div>
+              )}
+
+              {filteredTemplates.map(t => (
+                <button
+                  key={t.id}
+                  onClick={() => applyTemplate(t)}
+                  className="bg-white rounded-lg overflow-hidden border border-gray-200 hover:border-green-500 hover:shadow-lg transition-all text-left group"
+                >
+                  <div className="bg-gradient-to-br from-gray-100 to-gray-200 h-32 flex items-center justify-center overflow-hidden">
+                    {t.thumbnail_url ? (
+                      <img src={t.thumbnail_url} alt={t.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                    ) : (
+                      <span className="text-lg font-bold text-gray-400 px-2 text-center">{t.name}</span>
+                    )}
+                  </div>
+                  <div className="p-3">
+                    <p className="font-semibold text-sm text-gray-900 truncate">{t.name}</p>
+                    {t.description && <p className="text-xs text-gray-500 mt-0.5 truncate">{t.description}</p>}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Proof share modal ── */}
+      {showProofModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-gray-900">Share Proof Link</h2>
+              <button onClick={() => setShowProofModal(false)} className="text-gray-400 hover:text-gray-700">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="text-sm text-gray-600 mb-4">
+              Send this link to your customer (or yourself) for review and approval. The recipient can comment, request changes, or approve the design — no account required.
+            </p>
+            <div className="flex items-center gap-2 mb-3">
+              <input
+                type="text"
+                value={proofUrl}
+                readOnly
+                onFocus={e => e.target.select()}
+                className="flex-1 px-3 py-2 border border-gray-200 rounded text-xs font-mono bg-gray-50"
+              />
+              <button
+                onClick={copyProofUrl}
+                className="flex items-center gap-1.5 px-3 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-sm transition-colors"
+              >
+                <CopyIcon className="w-4 h-4" />
+                Copy
+              </button>
+            </div>
+            <p className="text-xs text-gray-400">
+              Proof saves the current design state. To send an updated version, generate a new link after making changes.
+            </p>
           </div>
         </div>
       )}
