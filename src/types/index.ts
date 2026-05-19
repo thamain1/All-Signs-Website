@@ -66,6 +66,7 @@ export interface CartItem {
   unit_price: number;
   total_price: number;
   production_speed: string;
+  store_id?: string | null;
   product?: Product;
 }
 

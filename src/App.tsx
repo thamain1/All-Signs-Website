@@ -25,6 +25,10 @@ import ContentSlots from './pages/admin/ContentSlots';
 import ProductsAdmin from './pages/admin/Products';
 import AdminStores from './pages/admin/Stores';
 import StoreDetail from './pages/admin/StoreDetail';
+import StoreFront from './pages/store/StoreFront';
+import StoreLogin from './pages/store/StoreLogin';
+import StoreJoin from './pages/store/StoreJoin';
+import StoreProductDetail from './pages/store/StoreProductDetail';
 
 function App() {
   return (
@@ -64,6 +68,11 @@ function App() {
               <Route path="/admin/products" element={<AdminGuard><ProductsAdmin /></AdminGuard>} />
               <Route path="/admin/stores" element={<AdminGuard><AdminStores /></AdminGuard>} />
               <Route path="/admin/stores/:slug" element={<AdminGuard><StoreDetail /></AdminGuard>} />
+
+              <Route path="/store/:slug" element={<StoreFront />} />
+              <Route path="/store/:slug/login" element={<StoreLogin />} />
+              <Route path="/store/:slug/join" element={<StoreJoin />} />
+              <Route path="/store/:slug/products/:productSlug" element={<StoreProductDetail />} />
 
               <Route path="/deals" element={<Home />} />
               <Route path="/track" element={<Home />} />
