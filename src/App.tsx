@@ -59,6 +59,7 @@ function App() {
             <Suspense fallback={<PageLoader />}>
               <Routes>
                 <Route path="/" element={<Home />} />
+                <Route path="/home" element={<Home />} />
 
                 <Route path="/products/:slug" element={<ProductCategory />} />
                 <Route path="/product/:slug" element={<ProductDetail />} />
