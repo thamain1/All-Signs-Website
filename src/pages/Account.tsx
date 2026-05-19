@@ -3,7 +3,7 @@ import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { Order } from '../types';
-import { Package, MapPin, User as UserIcon, Store } from 'lucide-react';
+import { Package, MapPin, User as UserIcon, Store, Palette } from 'lucide-react';
 
 export function Account() {
   const { user } = useAuth();
@@ -73,6 +73,15 @@ export function Account() {
             <UserIcon className="w-10 h-10 text-green-600 mb-4" />
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Profile</h3>
             <p className="text-gray-600 text-sm">Update your information</p>
+          </Link>
+
+          <Link
+            to="/account/designs"
+            className="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition"
+          >
+            <Palette className="w-10 h-10 text-green-600 mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">My Designs</h3>
+            <p className="text-gray-600 text-sm">Edit, duplicate, or reorder saved designs</p>
           </Link>
 
           {storeCount > 0 && (
