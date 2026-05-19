@@ -4,9 +4,16 @@ import { Plus, Store, Loader2, Pause, Play, ExternalLink, Pencil, Trash2 } from 
 import { supabase } from '../../lib/supabase';
 import { BusinessStore } from '../../types';
 
+interface StoreStats {
+  order_count: number;
+  revenue: number;
+  pending: number;
+}
+
 export default function AdminStores() {
   const navigate = useNavigate();
   const [stores, setStores] = useState<BusinessStore[]>([]);
+  const [stats, setStats] = useState<Record<string, StoreStats>>({});
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState('');
@@ -20,11 +27,22 @@ export default function AdminStores() {
 
   const loadStores = async () => {
     setLoading(true);
-    const { data } = await supabase
-      .from('business_stores')
-      .select('*')
-      .order('created_at', { ascending: false });
-    setStores(data || []);
+    const [{ data: storeData }, { data: orderData }] = await Promise.all([
+      supabase.from('business_stores').select('*').order('created_at', { ascending: false }),
+      supabase.from('orders').select('store_id, total_amount, status').not('store_id', 'is', null),
+    ]);
+    setStores(storeData || []);
+
+    // Aggregate order stats by store_id client-side
+    const agg: Record<string, StoreStats> = {};
+    for (const o of (orderData || [])) {
+      if (!o.store_id) continue;
+      if (!agg[o.store_id]) agg[o.store_id] = { order_count: 0, revenue: 0, pending: 0 };
+      agg[o.store_id].order_count++;
+      agg[o.store_id].revenue += o.total_amount ?? 0;
+      if (['pending', 'processing'].includes(o.status)) agg[o.store_id].pending++;
+    }
+    setStats(agg);
     setLoading(false);
   };
 
@@ -107,6 +125,8 @@ export default function AdminStores() {
                   <th className="px-4 py-3">Store</th>
                   <th className="px-4 py-3">URL</th>
                   <th className="px-4 py-3">Domains</th>
+                  <th className="px-4 py-3">Orders</th>
+                  <th className="px-4 py-3">Revenue</th>
                   <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3 text-right">Actions</th>
                 </tr>
@@ -144,6 +164,19 @@ export default function AdminStores() {
                           {s.allowed_email_domains.length > 2 && ` +${s.allowed_email_domains.length - 2}`}
                         </span>
                       )}
+                    </td>
+                    <td className="px-4 py-3 text-gray-700 text-xs">
+                      {stats[s.id] ? (
+                        <span>
+                          <strong>{stats[s.id].order_count}</strong>
+                          {stats[s.id].pending > 0 && (
+                            <span className="ml-1 text-yellow-600">({stats[s.id].pending} pending)</span>
+                          )}
+                        </span>
+                      ) : <span className="text-gray-400">—</span>}
+                    </td>
+                    <td className="px-4 py-3 text-xs font-semibold text-gray-900">
+                      {stats[s.id] ? `$${stats[s.id].revenue.toFixed(2)}` : <span className="text-gray-400 font-normal">—</span>}
                     </td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${

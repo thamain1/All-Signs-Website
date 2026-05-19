@@ -1,9 +1,10 @@
-import { useState } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Navigate, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useCart } from '../contexts/CartContext';
 import { supabase } from '../lib/supabase';
-import { Loader2, CreditCard, Truck } from 'lucide-react';
+import { Loader2, CreditCard, Truck, Store } from 'lucide-react';
+import { BusinessStore } from '../types';
 
 export function Checkout() {
   const { user } = useAuth();
@@ -11,6 +12,21 @@ export function Checkout() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [storeContext, setStoreContext] = useState<BusinessStore | null>(null);
+
+  useEffect(() => {
+    const storeId = items.find(i => i.store_id)?.store_id;
+    if (storeId) {
+      supabase
+        .from('business_stores')
+        .select('*')
+        .eq('id', storeId)
+        .maybeSingle()
+        .then(({ data }) => setStoreContext(data));
+    } else {
+      setStoreContext(null);
+    }
+  }, [items]);
 
   const [formData, setFormData] = useState({
     fullName: '',
@@ -109,6 +125,32 @@ export function Checkout() {
     <div className="bg-gray-50 min-h-screen py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-8">Checkout</h1>
+
+        {storeContext && (
+          <div
+            className="flex items-center gap-3 px-5 py-3 rounded-xl mb-6 border"
+            style={{ backgroundColor: storeContext.primary_color + '15', borderColor: storeContext.primary_color + '40' }}
+          >
+            <div
+              className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+              style={{ backgroundColor: storeContext.primary_color }}
+            >
+              {storeContext.logo_url ? (
+                <img src={storeContext.logo_url} alt={storeContext.name} className="w-full h-full object-contain p-1 rounded-lg" style={{ filter: 'brightness(0) invert(1)' }} />
+              ) : (
+                <Store className="w-4 h-4 text-white" />
+              )}
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-gray-900">
+                Company Store Order — {storeContext.name}
+              </p>
+              <Link to={`/store/${storeContext.slug}`} className="text-xs hover:underline" style={{ color: storeContext.primary_color }}>
+                ← Back to store
+              </Link>
+            </div>
+          </div>
+        )}
 
         <div className="grid lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2">
@@ -317,6 +359,14 @@ export function Checkout() {
           <div className="lg:col-span-1">
             <div className="bg-white rounded-xl p-6 shadow-sm sticky top-24">
               <h2 className="text-xl font-bold text-gray-900 mb-4">Order Summary</h2>
+              {storeContext && (
+                <div className="flex items-center gap-2 mb-4 pb-4 border-b border-gray-100">
+                  <div className="w-5 h-5 rounded flex items-center justify-center flex-shrink-0" style={{ backgroundColor: storeContext.primary_color }}>
+                    <Store className="w-3 h-3 text-white" />
+                  </div>
+                  <span className="text-xs font-medium text-gray-700">{storeContext.name} Store</span>
+                </div>
+              )}
               <div className="space-y-3 mb-6">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Subtotal ({items.length} items)</span>

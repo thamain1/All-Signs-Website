@@ -354,6 +354,27 @@ export default function StoreDetail() {
 
         {/* ── Orders ── */}
         {tab === 'orders' && (
+          <div className="space-y-4">
+            {!ordersLoading && orders.length > 0 && (() => {
+              const totalRevenue = orders.reduce((s, o) => s + o.total_amount, 0);
+              const pendingCount = orders.filter(o => ['pending', 'processing'].includes(o.status)).length;
+              return (
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="bg-white rounded-xl border border-gray-200 p-4 text-center">
+                    <p className="text-xs text-gray-500 uppercase font-semibold mb-1">Total Orders</p>
+                    <p className="text-2xl font-bold text-gray-900">{orders.length}</p>
+                  </div>
+                  <div className="bg-white rounded-xl border border-gray-200 p-4 text-center">
+                    <p className="text-xs text-gray-500 uppercase font-semibold mb-1">Total Revenue</p>
+                    <p className="text-2xl font-bold text-green-600">${totalRevenue.toFixed(2)}</p>
+                  </div>
+                  <div className="bg-white rounded-xl border border-gray-200 p-4 text-center">
+                    <p className="text-xs text-gray-500 uppercase font-semibold mb-1">Pending Fulfillment</p>
+                    <p className={`text-2xl font-bold ${pendingCount > 0 ? 'text-yellow-600' : 'text-gray-400'}`}>{pendingCount}</p>
+                  </div>
+                </div>
+              );
+            })()}
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
             {ordersLoading ? (
               <div className="flex justify-center py-12">
@@ -400,6 +421,7 @@ export default function StoreDetail() {
                 </tbody>
               </table>
             )}
+          </div>
           </div>
         )}
       </div>
