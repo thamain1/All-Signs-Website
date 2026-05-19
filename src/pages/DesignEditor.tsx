@@ -1473,7 +1473,7 @@ export function DesignEditor() {
           </div>
 
           {/* Zoom controls */}
-          <div className="absolute bottom-4 right-4 bg-white border border-gray-200 rounded-lg shadow-md flex items-center divide-x divide-gray-200">
+          <div className="absolute top-4 right-4 bg-white border border-gray-200 rounded-lg shadow-md flex items-center divide-x divide-gray-200">
             <button onClick={zoomOut} title="Zoom out (Ctrl+-)" className="p-2 hover:bg-gray-50 text-gray-700">
               <Minus className="w-4 h-4" />
             </button>
@@ -1489,7 +1489,7 @@ export function DesignEditor() {
           </div>
 
           {/* Keyboard hint */}
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-xs text-gray-400 bg-white/80 px-3 py-1 rounded-full shadow-sm pointer-events-none whitespace-nowrap">
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 text-xs text-gray-400 bg-white/80 px-3 py-1 rounded-full shadow-sm pointer-events-none whitespace-nowrap">
             Click to select · Double-click text to edit · Ctrl+Z undo · Ctrl+C/V copy · Ctrl+/- zoom
           </div>
         </div>
