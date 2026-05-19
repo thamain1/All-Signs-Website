@@ -280,10 +280,6 @@ export function DesignEditor() {
     if (error || !data) { navigate('/account/designs'); return; }
     setDesign(data);
     setDesignName(data.name);
-    if (data.product_id) {
-      const { data: prod } = await supabase.from('products').select('*').eq('id', data.product_id).maybeSingle();
-      if (prod) setProduct(prod);
-    }
     // Show template picker if the design is empty
     const ed = data.editor_json;
     const parsed = typeof ed === 'string' ? (() => { try { return JSON.parse(ed); } catch { return null; } })() : ed;
@@ -291,6 +287,11 @@ export function DesignEditor() {
       setShowTemplatePicker(true);
     }
     setLoading(false);
+    // Fetch product after loading=false so the canvas mounts in the same render as setDesign
+    if (data.product_id) {
+      const { data: prod } = await supabase.from('products').select('*').eq('id', data.product_id).maybeSingle();
+      if (prod) setProduct(prod);
+    }
   };
 
   const loadTemplates = async () => {
