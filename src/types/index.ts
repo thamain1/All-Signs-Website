@@ -251,6 +251,56 @@ export interface ProofLink {
   created_at: string;
 }
 
+export interface BusinessStore {
+  id: string;
+  slug: string;
+  name: string;
+  owner_user_id: string | null;
+  logo_url: string | null;
+  logo_storage_path: string | null;
+  primary_color: string;
+  welcome_message: string | null;
+  allowed_email_domains: string[];
+  status: 'active' | 'paused' | 'archived';
+  created_at: string;
+  updated_at: string;
+}
+
+export interface StoreProduct {
+  id: string;
+  store_id: string;
+  product_id: string;
+  display_name: string | null;
+  display_description: string | null;
+  mockup_image_url: string | null;
+  logo_placement_notes: string | null;
+  custom_unit_price: number | null;
+  display_order: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  product?: Product;
+}
+
+export interface StoreMember {
+  id: string;
+  store_id: string;
+  user_id: string;
+  role: 'buyer' | 'manager' | 'owner';
+  created_at: string;
+}
+
+export interface StoreSignupInfo {
+  id: string;
+  name: string;
+  slug: string;
+  logo_url: string | null;
+  primary_color: string;
+  welcome_message: string | null;
+  allowed_email_domains: string[];
+  status: 'active' | 'paused' | 'archived';
+}
+
 export interface ProofComment {
   id: string;
   proof_link_id: string;

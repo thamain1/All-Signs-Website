@@ -23,6 +23,8 @@ import AdminDashboard from './pages/admin/Dashboard';
 import MediaLibrary from './pages/admin/MediaLibrary';
 import ContentSlots from './pages/admin/ContentSlots';
 import ProductsAdmin from './pages/admin/Products';
+import AdminStores from './pages/admin/Stores';
+import StoreDetail from './pages/admin/StoreDetail';
 
 function App() {
   return (
@@ -60,6 +62,8 @@ function App() {
               <Route path="/admin/media" element={<AdminGuard><MediaLibrary /></AdminGuard>} />
               <Route path="/admin/content" element={<AdminGuard><ContentSlots /></AdminGuard>} />
               <Route path="/admin/products" element={<AdminGuard><ProductsAdmin /></AdminGuard>} />
+              <Route path="/admin/stores" element={<AdminGuard><AdminStores /></AdminGuard>} />
+              <Route path="/admin/stores/:slug" element={<AdminGuard><StoreDetail /></AdminGuard>} />
 
               <Route path="/deals" element={<Home />} />
               <Route path="/track" element={<Home />} />
