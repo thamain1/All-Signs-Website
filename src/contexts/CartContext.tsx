@@ -29,11 +29,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const { data: cartData } = await supabase
+    // Use limit(1) + order so multiple stale cart rows never trigger a new insert
+    const { data: cartRows } = await supabase
       .from('carts')
       .select('*')
       .eq('user_id', user.id)
-      .maybeSingle();
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    const cartData = cartRows?.[0] ?? null;
 
     if (cartData) {
       setCart(cartData);
